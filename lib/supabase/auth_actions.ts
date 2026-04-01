@@ -1,0 +1,77 @@
+"use server";
+
+import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+
+//OAuth
+const signInWith = (provider: "google" | "github") => async () => {
+  const supabase = await createClient();
+
+  const auth_callback_url = `${process.env.SITE_URL}/auth/callback`;
+
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider,
+    options: {
+      redirectTo: auth_callback_url,
+    },
+  });
+
+  // console.log(data);
+
+  if (error) console.log(error);
+
+  redirect(data.url ?? "/"); //redirect to googl's consent screeen.
+};
+
+const signinWithGoogle = signInWith("google");
+
+//Magic Link OTP
+const signinWithMagicLink = async (email: string) => {
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.signInWithOtp({
+    email,
+    options: {
+      emailRedirectTo: `${process.env.SITE_URL}/auth/callback?next=/cart`,
+    },
+  });
+  // console.log(data);
+  if (error) {
+    console.log(error);
+    return { success: null, error: error.message };
+  }
+  return { success: "please check your email", error: null };
+};
+
+const signOut = async () => {
+  const supabase = await createClient();
+  await supabase.auth.signOut();
+};
+
+const getAuthUser = async () => {
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.getUser();
+  if (error || !data?.user) {
+    redirect("/auth/login");
+  }
+  return data.user;
+};
+
+const isUserAuthenticated = async (): Promise<boolean> => {
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.getUser();
+  if (error || !data?.user) {
+    return false;
+  }
+  return true;
+};
+
+export {
+  signinWithGoogle,
+  signOut,
+  signinWithMagicLink,
+  getAuthUser,
+  isUserAuthenticated,
+};
+
+
+//for server components only

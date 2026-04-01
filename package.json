@@ -45,7 +45,9 @@
     "@dnd-kit/react": "^0.3.2",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
-    "prisma": "^6.0.0"
+    "prisma": "^6.0.0",    
+    "@supabase/ssr": "latest",
+    "@supabase/supabase-js": "latest"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
