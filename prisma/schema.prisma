@@ -439,7 +439,7 @@ model Setting {
 
 // Add Materialized View here
 view AverageProductRating {
-  product_id     String  @id @unique
+  product_id     String @unique
   average_rating Float?
   review_count   Int?
 

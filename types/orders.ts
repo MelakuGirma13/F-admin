@@ -1,28 +1,28 @@
 // Matches the `order_status` PostgreSQL enum in Supabase
 export type OrderStatus =
-  | "pending"
-  | "placed"
-  | "processing"
-  | "dispatched"
-  | "completed"
-  | "cancelled";
+  | "PENDING"
+  | "ORDER_PLACED"
+  | "PROCESSING"
+  | "DISPATCHED"
+  | "COMPLETED"
+  | "CANCELLED";
 
 export const ORDER_STATUSES: OrderStatus[] = [
-  "pending",
-  "placed",
-  "processing",
-  "dispatched",
-  "completed",
-  "cancelled",
+  "PENDING",
+  "ORDER_PLACED",
+  "PROCESSING",
+  "DISPATCHED",
+  "COMPLETED",
+  "CANCELLED",
 ];
 
 export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
-  pending: "Pending",
-  placed: "Order Placed",
-  processing: "Processing",
-  dispatched: "Dispatched",
-  completed: "Completed",
-  cancelled: "Cancelled",
+  PENDING: "PENDING",
+  ORDER_PLACED: "ORDER_PLACED",
+  PROCESSING: "PROCESSING",
+  DISPATCHED: "DISPATCHED",
+  COMPLETED: "COMPLETED",
+  CANCELLED: "Cancelled",
 };
 
 // Matches the `order_items` table
@@ -41,6 +41,7 @@ export interface Order {
   id: string;
   customer: string;
   email: string;
+  order_number: string;
   status: OrderStatus;
   is_paid: boolean;
   total: number;

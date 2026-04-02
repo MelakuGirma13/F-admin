@@ -18,20 +18,20 @@ const data = {
   },
   teams: [
     {
-      name: "Acme Inc",
+      name: "Fafresh",
       logo: GalleryVerticalEnd,
-      plan: "Enterprise",
+      plan: "Fashion",
     },
-    {
-      name: "Acme Corp.",
-      logo: AudioWaveform,
-      plan: "Startup",
-    },
-    {
-      name: "Evil Corp.",
-      logo: Command,
-      plan: "Free",
-    },
+    // {
+    //   name: "Fafresh",
+    //   logo: AudioWaveform,
+    //   plan: "Startup",
+    // },
+    // {
+    //   name: "Evil Corp.",
+    //   logo: Command,
+    //   plan: "Free",
+    // },
   ],
   navMain: [
     {
@@ -61,11 +61,11 @@ const data = {
       items: [
         {
           title: "Products",
-          url: "#",
+          url: "/admin/products",
         },
         {
           title: "Orders",
-          url: "#",
+          url: "/admin/orders",
         },
         // {
         //   title: "Quantum",

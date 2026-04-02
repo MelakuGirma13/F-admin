@@ -228,8 +228,8 @@ export function OrdersTable({
         />
       ),
     }),
-    col.accessor("id", {
-      id: "id",
+    col.accessor("order_number", {
+      id: "order_number",
       enableHiding: false,
       header: () => (
         <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -241,44 +241,44 @@ export function OrdersTable({
           className="font-mono text-sm font-medium text-foreground hover:text-primary hover:underline transition-colors"
           onClick={() => setDetailOrder(info.row.original)}
         >
-          {info.getValue()}
+          {info.getValue<string>()}
         </button>
       ),
     }),
-    col.accessor("customer", {
-      header: () => (
-        <SortButton
-          label="Customer"
-          field="customer"
-          currentField={sortField}
-          currentDir={sortDir}
-          onSort={pushSort}
-          disabled={isPending}
-        />
-      ),
-      cell: (info) => (
-        <span className="text-sm text-foreground max-w-36 truncate block">
-          {info.getValue()}
-        </span>
-      ),
-    }),
-    col.accessor("email", {
-      header: () => (
-        <SortButton
-          label="Email"
-          field="email"
-          currentField={sortField}
-          currentDir={sortDir}
-          onSort={pushSort}
-          disabled={isPending}
-        />
-      ),
-      cell: (info) => (
-        <span className="text-sm text-muted-foreground max-w-44 truncate block">
-          {info.getValue()}
-        </span>
-      ),
-    }),
+    // col.accessor("customer", {
+    //   header: () => (
+    //     <SortButton
+    //       label="Customer"
+    //       field="customer"
+    //       currentField={sortField}
+    //       currentDir={sortDir}
+    //       onSort={pushSort}
+    //       disabled={isPending}
+    //     />
+    //   ),
+    //   cell: (info) => (
+    //     <span className="text-sm text-foreground max-w-36 truncate block">
+    //       {info.getValue()}
+    //     </span>
+    //   ),
+    // }),
+    // col.accessor("email", {
+    //   header: () => (
+    //     <SortButton
+    //       label="Email"
+    //       field="email"
+    //       currentField={sortField}
+    //       currentDir={sortDir}
+    //       onSort={pushSort}
+    //       disabled={isPending}
+    //     />
+    //   ),
+    //   cell: (info) => (
+    //     <span className="text-sm text-muted-foreground max-w-44 truncate block">
+    //       {info.getValue()}
+    //     </span>
+    //   ),
+    // }),
     col.accessor("total", {
       header: () => (
         <div className="flex justify-end">
