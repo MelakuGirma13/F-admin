@@ -87,12 +87,12 @@ const OrdersPage = async ({
   // ── Fetch data ──
   let result
   let completedCount = 0
-  let processingCount = 0
+  let pendingCount = 0
   let cancelledCount = 0
   let fetchError: string | null = null
 
   try {
-    ;[result, completedCount, processingCount, cancelledCount] =
+    ;[result, completedCount, pendingCount, cancelledCount] =
       await Promise.all([
         getOrders({
           search,
@@ -106,7 +106,7 @@ const OrdersPage = async ({
           pageSize,
         }),
         getOrderCountByStatus("COMPLETED"),
-        getOrderCountByStatus("PROCESSING"),
+        getOrderCountByStatus("PENDING"),
         getOrderCountByStatus("CANCELLED"),
       ])
   } catch (err) {
@@ -156,9 +156,9 @@ const OrdersPage = async ({
             accent="completed"
           />
           <StatCard
-            label="Processing"
-            value={processingCount}
-            accent="processing"
+            label="Pending"
+            value={pendingCount}
+            accent="Pending"
           />
           <StatCard
             label="Cancelled"

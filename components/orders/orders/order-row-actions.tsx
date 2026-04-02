@@ -154,7 +154,7 @@ export function OrderRowActions({ order, onViewDetails }: OrderRowActionsProps) 
               Update status
             </DropdownMenuSubTrigger>
             <DropdownMenuSubContent>
-              {ORDER_STATUSES.filter((s) => s !== "cancelled").map((s) => (
+              {ORDER_STATUSES.filter((s) => s !== "CANCELLED").map((s) => (
                 <DropdownMenuItem
                   key={s}
                   onClick={() => handleStatusChange(s)}

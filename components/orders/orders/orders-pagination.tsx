@@ -1,15 +1,21 @@
-"use client";
+"use client"
 
-import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { useTransition } from "react";
-import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Loader2 } from "lucide-react";
+import { useRouter, usePathname, useSearchParams } from "next/navigation"
+import { useTransition } from "react"
+import { Button } from "@/components/ui/button"
+import {
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  Loader2,
+} from "lucide-react"
 
 interface OrdersPaginationProps {
-  page: number;
-  totalPages: number;
-  pageSize: number;
-  total: number;
+  page: number
+  totalPages: number
+  pageSize: number
+  total: number
 }
 
 export function OrdersPagination({
@@ -18,38 +24,38 @@ export function OrdersPagination({
   pageSize,
   total,
 }: OrdersPaginationProps) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const [isPending, startTransition] = useTransition();
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const [isPending, startTransition] = useTransition()
 
   function navigate(updates: Record<string, string>) {
-    const params = new URLSearchParams(searchParams.toString());
-    Object.entries(updates).forEach(([k, v]) => params.set(k, v));
+    const params = new URLSearchParams(searchParams.toString())
+    Object.entries(updates).forEach(([k, v]) => params.set(k, v))
     startTransition(() => {
-      router.push(`${pathname}?${params.toString()}`);
-    });
+      router.push(`${pathname}?${params.toString()}`)
+    })
   }
 
   function goToPage(p: number) {
-    navigate({ page: String(p) });
+    navigate({ page: String(p) })
   }
 
-  const start = total === 0 ? 0 : Math.min((page - 1) * pageSize + 1, total);
-  const end = Math.min(page * pageSize, total);
+  const start = total === 0 ? 0 : Math.min((page - 1) * pageSize + 1, total)
+  const end = Math.min(page * pageSize, total)
 
   function getPageNumbers(): (number | "ellipsis")[] {
     if (totalPages <= 7) {
-      return Array.from({ length: totalPages }, (_, i) => i + 1);
+      return Array.from({ length: totalPages }, (_, i) => i + 1)
     }
-    const pages: (number | "ellipsis")[] = [1];
-    if (page > 3) pages.push("ellipsis");
-    const rangeStart = Math.max(2, page - 1);
-    const rangeEnd = Math.min(totalPages - 1, page + 1);
-    for (let i = rangeStart; i <= rangeEnd; i++) pages.push(i);
-    if (page < totalPages - 2) pages.push("ellipsis");
-    if (totalPages > 1) pages.push(totalPages);
-    return pages;
+    const pages: (number | "ellipsis")[] = [1]
+    if (page > 3) pages.push("ellipsis")
+    const rangeStart = Math.max(2, page - 1)
+    const rangeEnd = Math.min(totalPages - 1, page + 1)
+    for (let i = rangeStart; i <= rangeEnd; i++) pages.push(i)
+    if (page < totalPages - 2) pages.push("ellipsis")
+    if (totalPages > 1) pages.push(totalPages)
+    return pages
   }
 
   return (
@@ -58,23 +64,27 @@ export function OrdersPagination({
       <p className="text-sm text-muted-foreground">
         {total > 0 ? (
           <>
-            Showing{" "}
-            <span className="font-medium text-foreground">{start}</span>
+            Showing <span className="font-medium text-foreground">{start}</span>
             {"–"}
             <span className="font-medium text-foreground">{end}</span> of{" "}
-            <span className="font-medium text-foreground">{total.toLocaleString()}</span>{" "}
+            <span className="font-medium text-foreground">
+              {total.toLocaleString()}
+            </span>{" "}
             orders
           </>
         ) : (
           "No orders"
         )}
         {isPending && (
-          <Loader2 className="inline ml-2 h-3.5 w-3.5 animate-spin text-muted-foreground" />
+          <Loader2 className="ml-2 inline h-3.5 w-3.5 animate-spin text-muted-foreground" />
         )}
       </p>
 
       {/* Right: page navigator */}
-      <nav className="flex items-center gap-1" aria-label="Pagination navigation">
+      <nav
+        className="flex items-center gap-1"
+        aria-label="Pagination navigation"
+      >
         <Button
           variant="outline"
           size="icon"
@@ -145,5 +155,5 @@ export function OrdersPagination({
         </Button>
       </nav>
     </div>
-  );
+  )
 }

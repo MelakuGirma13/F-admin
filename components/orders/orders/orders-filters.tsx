@@ -30,12 +30,11 @@ import { Calendar } from "@/components/ui/calendar";
 
 const STATUS_OPTIONS: { value: OrderStatus | "ALL"; label: string }[] = [
   { value: "ALL", label: "All Statuses" },
-  { value: "pending", label: "Pending" },
-  { value: "placed", label: "Order Placed" },
-  { value: "processing", label: "Processing" },
-  { value: "dispatched", label: "Dispatched" },
-  { value: "completed", label: "Completed" },
-  { value: "cancelled", label: "Cancelled" },
+  { value: "PENDING", label: "Pending" },
+  { value: "PROCESSING", label: "Processing" },
+  { value: "DISPATCHED", label: "Dispatched" },
+  { value: "COMPLETED", label: "Completed" },
+  { value: "CANCELLED", label: "Cancelled" },
 ];
 
 const PAID_OPTIONS = [
@@ -233,7 +232,7 @@ export function OrdersFilters({
           </SelectContent>
         </Select>
 
-        {/* Date range */}
+        {/* Date range
         <Popover open={calOpen} onOpenChange={setCalOpen}>
           <PopoverTrigger asChild>
             <Button
@@ -273,7 +272,7 @@ export function OrdersFilters({
               </div>
             )}
           </PopoverContent>
-        </Popover>
+        </Popover> */}
 
         {/* Column visibility */}
         <DropdownMenu>
