@@ -6,7 +6,7 @@ import Providers from "./providers"
 
 import { Agentation } from "agentation"
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
+const inter = Inter({subsets:['latin'],variable:'--font-sans'})
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
