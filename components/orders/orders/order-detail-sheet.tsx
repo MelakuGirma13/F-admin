@@ -1,22 +1,22 @@
-"use client";
+"use client"
 
-import { useState, useTransition } from "react";
-import { toast } from "sonner";
+import { useState, useTransition } from "react"
+import { toast } from "sonner"
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
-} from "@/components/ui/sheet";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
+} from "@/components/ui/sheet"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Separator } from "@/components/ui/separator"
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
+} from "@/components/ui/tooltip"
 import {
   Printer,
   RotateCcw,
@@ -38,17 +38,23 @@ import {
   ShoppingBag,
   Loader2,
   ReceiptText,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
-import { OrderStatusBadge, IsPaidBadge } from "./order-status-badge";
-import type { Order, OrderStatus } from "@/types/orders";
-import { toggleOrderPaidAction, updateOrderStatusAction, cancelOrderAction } from "@/app/actions/orders/orders";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-
+} from "lucide-react"
+import { cn } from "@/lib/utils"
+import { OrderStatusBadge, IsPaidBadge } from "./order-status-badge"
+import type { Order, OrderStatus } from "@/types/orders"
+import {
+  toggleOrderPaidAction,
+  updateOrderStatusAction,
+  cancelOrderAction,
+} from "@/app/actions/orders/orders"
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-const fmt = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
+const fmt = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+})
 
 const formatDate = (iso: string) =>
   new Intl.DateTimeFormat("en-US", {
@@ -57,7 +63,7 @@ const formatDate = (iso: string) =>
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
-  }).format(new Date(iso));
+  }).format(new Date(iso))
 
 const formatShort = (iso: string) =>
   new Intl.DateTimeFormat("en-US", {
@@ -66,29 +72,29 @@ const formatShort = (iso: string) =>
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
-  }).format(new Date(iso));
+  }).format(new Date(iso))
 
 // ─── Copy Button ─────────────────────────────────────────────────────────────
 
 function CopyButton({ value, label }: { value: string; label: string }) {
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState(false)
   const copy = () => {
     navigator.clipboard.writeText(value).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    });
-  };
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    })
+  }
   return (
     <TooltipProvider delayDuration={300}>
       <Tooltip>
         <TooltipTrigger asChild>
           <button
             onClick={copy}
-            className="text-muted-foreground hover:text-foreground transition-colors"
+            className="text-muted-foreground transition-colors hover:text-foreground"
             aria-label={`Copy ${label}`}
           >
             {copied ? (
-              <Check className="h-3.5 w-3.5 text-status-completed" />
+              <Check className="text-status-completed h-3.5 w-3.5" />
             ) : (
               <Copy className="h-3.5 w-3.5" />
             )}
@@ -99,7 +105,7 @@ function CopyButton({ value, label }: { value: string; label: string }) {
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
-  );
+  )
 }
 
 // ─── Section wrapper ──────────────────────────────────────────────────────────
@@ -109,21 +115,21 @@ function Section({
   icon: Icon,
   children,
 }: {
-  title: string;
-  icon: React.ElementType;
-  children: React.ReactNode;
+  title: string
+  icon: React.ElementType
+  children: React.ReactNode
 }) {
   return (
     <section className="space-y-3">
       <div className="flex items-center gap-2">
         <Icon className="h-4 w-4 text-muted-foreground" />
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        <h3 className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
           {title}
         </h3>
       </div>
       {children}
     </section>
-  );
+  )
 }
 
 // ─── Info row ──────────────────────────────────────────────────────────────────
@@ -135,18 +141,20 @@ function InfoRow({
   copyValue,
   href,
 }: {
-  label: string;
-  value: React.ReactNode;
-  mono?: boolean;
-  copyValue?: string;
-  href?: string;
+  label: string
+  value: React.ReactNode
+  mono?: boolean
+  copyValue?: string
+  href?: string
 }) {
   return (
     <div className="flex items-start justify-between gap-4 px-4 py-2.5">
-      <span className="text-xs text-muted-foreground shrink-0 w-28">{label}</span>
+      <span className="w-28 shrink-0 text-xs text-muted-foreground">
+        {label}
+      </span>
       <span
         className={cn(
-          "text-xs text-foreground text-right flex items-center gap-1.5",
+          "flex items-center gap-1.5 text-right text-xs text-foreground",
           mono && "font-mono"
         )}
       >
@@ -155,7 +163,7 @@ function InfoRow({
             href={href}
             target="_blank"
             rel="noopener noreferrer"
-            className="hover:underline flex items-center gap-1"
+            className="flex items-center gap-1 hover:underline"
           >
             {value}
             <ExternalLink className="h-3 w-3 text-muted-foreground" />
@@ -166,67 +174,85 @@ function InfoRow({
         {copyValue && <CopyButton value={copyValue} label={label} />}
       </span>
     </div>
-  );
+  )
 }
 
 // ─── Fulfillment timeline ─────────────────────────────────────────────────────
 
 type TimelineStep = {
-  key: OrderStatus;
-  label: string;
-  description: string;
-};
+  key: OrderStatus
+  label: string
+  description: string
+}
 
 const TIMELINE_STEPS: TimelineStep[] = [
-  { key: "ORDER_PLACED",     label: "Order Placed",    description: "Order received and confirmed" },
-  { key: "PROCESSING", label: "Processing",       description: "Items being prepared" },
-  { key: "DISPATCHED", label: "Dispatched",       description: "Package handed to carrier" },
-  { key: "COMPLETED",  label: "Delivered",        description: "Order delivered to customer" },
-];
+  {
+    key: "ORDER_PLACED",
+    label: "Order Placed",
+    description: "Order received and confirmed",
+  },
+  {
+    key: "PROCESSING",
+    label: "Processing",
+    description: "Items being prepared",
+  },
+  {
+    key: "DISPATCHED",
+    label: "Dispatched",
+    description: "Package handed to carrier",
+  },
+  {
+    key: "COMPLETED",
+    label: "Delivered",
+    description: "Order delivered to customer",
+  },
+]
 
 const STATUS_STEP_INDEX: Partial<Record<OrderStatus, number>> = {
-  PENDING:     -1,
-  ORDER_PLACED:      0,
-  PROCESSING:  1,
-  DISPATCHED:  2,
-  COMPLETED:   3,
-  CANCELLED:   -2,
-};
+  PENDING: -1,
+  ORDER_PLACED: 0,
+  PROCESSING: 1,
+  DISPATCHED: 2,
+  COMPLETED: 3,
+  CANCELLED: -2,
+}
 
 function FulfillmentTimeline({ status }: { status: OrderStatus }) {
-  const currentIdx = STATUS_STEP_INDEX[status] ?? -1;
-  const isCancelled = status === "CANCELLED";
+  const currentIdx = STATUS_STEP_INDEX[status] ?? -1
+  const isCancelled = status === "CANCELLED"
 
   if (isCancelled) {
     return (
       <div className="flex items-center gap-2 rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2.5">
-        <AlertCircle className="h-4 w-4 text-destructive shrink-0" />
-        <span className="text-sm text-destructive font-medium">Order cancelled</span>
+        <AlertCircle className="h-4 w-4 shrink-0 text-destructive" />
+        <span className="text-sm font-medium text-destructive">
+          Order cancelled
+        </span>
       </div>
-    );
+    )
   }
 
   return (
     <div className="space-y-0">
       {TIMELINE_STEPS.map((step, idx) => {
-        const done = idx < currentIdx;
-        const active = idx === currentIdx;
-        const upcoming = idx > currentIdx;
+        const done = idx < currentIdx
+        const active = idx === currentIdx
+        const upcoming = idx > currentIdx
         return (
           <div key={step.key} className="flex items-start gap-3">
             <div className="flex flex-col items-center">
               <div
                 className={cn(
-                  "flex h-6 w-6 items-center justify-center rounded-full border-2 shrink-0 mt-0.5",
-                  done   && "border-status-completed bg-status-completed/10",
+                  "mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2",
+                  done && "border-status-completed bg-status-completed/10",
                   active && "border-status-placed bg-status-placed/10",
                   upcoming && "border-border bg-muted/40"
                 )}
               >
                 {done ? (
-                  <CheckCircle2 className="h-3.5 w-3.5 text-status-completed" />
+                  <CheckCircle2 className="text-status-completed h-3.5 w-3.5" />
                 ) : active ? (
-                  <Circle className="h-3.5 w-3.5 text-status-placed fill-status-placed" />
+                  <Circle className="text-status-placed fill-status-placed h-3.5 w-3.5" />
                 ) : (
                   <Circle className="h-3 w-3 text-border" />
                 )}
@@ -234,13 +260,13 @@ function FulfillmentTimeline({ status }: { status: OrderStatus }) {
               {idx < TIMELINE_STEPS.length - 1 && (
                 <div
                   className={cn(
-                    "w-0.5 h-6",
+                    "h-6 w-0.5",
                     done ? "bg-status-completed/40" : "bg-border"
                   )}
                 />
               )}
             </div>
-            <div className="pb-1 pt-0.5">
+            <div className="pt-0.5 pb-1">
               <p
                 className={cn(
                   "text-xs font-medium",
@@ -249,18 +275,25 @@ function FulfillmentTimeline({ status }: { status: OrderStatus }) {
               >
                 {step.label}
               </p>
-              <p className="text-xs text-muted-foreground">{step.description}</p>
+              <p className="text-xs text-muted-foreground">
+                {step.description}
+              </p>
             </div>
           </div>
-        );
+        )
       })}
     </div>
-  );
+  )
 }
 
 // ─── Activity item ────────────────────────────────────────────────────────────
 
-type ActivityEvent = { label: string; time: string; icon: React.ElementType; color: string };
+type ActivityEvent = {
+  label: string
+  time: string
+  icon: React.ElementType
+  color: string
+}
 
 function buildActivityLog(order: Order): ActivityEvent[] {
   const events: ActivityEvent[] = [
@@ -270,37 +303,63 @@ function buildActivityLog(order: Order): ActivityEvent[] {
       icon: ShoppingBag,
       color: "text-status-placed",
     },
-  ];
+  ]
   if (order.is_paid) {
     events.push({
       label: "Payment confirmed",
       time: order.updated_at,
       icon: CreditCard,
       color: "text-status-completed",
-    });
+    })
   }
   if (order.status === "PROCESSING") {
-    events.push({ label: "Order processing started", time: order.updated_at, icon: Package, color: "text-status-processing" });
+    events.push({
+      label: "Order processing started",
+      time: order.updated_at,
+      icon: Package,
+      color: "text-status-processing",
+    })
   }
   if (order.status === "DISPATCHED") {
-    events.push({ label: "Order dispatched", time: order.updated_at, icon: Truck, color: "text-status-dispatched" });
+    events.push({
+      label: "Order dispatched",
+      time: order.updated_at,
+      icon: Truck,
+      color: "text-status-dispatched",
+    })
   }
   if (order.status === "COMPLETED") {
-    events.push({ label: "Order delivered", time: order.updated_at, icon: CheckCircle2, color: "text-status-completed" });
+    events.push({
+      label: "Order delivered",
+      time: order.updated_at,
+      icon: CheckCircle2,
+      color: "text-status-completed",
+    })
   }
   if (order.status === "CANCELLED") {
-    events.push({ label: "Order cancelled", time: order.updated_at, icon: XCircle, color: "text-destructive-foreground" });
+    events.push({
+      label: "Order cancelled",
+      time: order.updated_at,
+      icon: XCircle,
+      color: "text-destructive-foreground",
+    })
   }
-  return events.reverse();
+  return events.reverse()
 }
 
 // ─── Skeleton ────────────────────────────────────────────────────────────────
 
-export function OrderDetailSheetSkeleton({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function OrderDetailSheetSkeleton({
+  open,
+  onClose,
+}: {
+  open: boolean
+  onClose: () => void
+}) {
   return (
     <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
-      <SheetContent className="w-full sm:max-w-[560px] p-0 flex flex-col">
-        <div className="px-6 pt-6 pb-4 border-b border-border space-y-3 animate-pulse">
+      <SheetContent className="flex w-full flex-col p-0 sm:max-w-[560px]">
+        <div className="animate-pulse space-y-3 border-b border-border px-6 pt-6 pb-4">
           <div className="h-5 w-32 rounded bg-muted" />
           <div className="h-4 w-48 rounded bg-muted" />
           <div className="flex gap-2">
@@ -308,7 +367,7 @@ export function OrderDetailSheetSkeleton({ open, onClose }: { open: boolean; onC
             <div className="h-6 w-16 rounded-full bg-muted" />
           </div>
         </div>
-        <div className="flex-1 px-6 py-5 space-y-6 animate-pulse">
+        <div className="flex-1 animate-pulse space-y-6 px-6 py-5">
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="space-y-2">
               <div className="h-3 w-24 rounded bg-muted" />
@@ -318,40 +377,47 @@ export function OrderDetailSheetSkeleton({ open, onClose }: { open: boolean; onC
         </div>
       </SheetContent>
     </Sheet>
-  );
+  )
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
 interface OrderDetailSheetProps {
-  order: Order | null;
-  open: boolean;
-  onClose: () => void;
+  order: Order | null
+  open: boolean
+  onClose: () => void
 }
 
-export function OrderDetailSheet({ order, open, onClose }: OrderDetailSheetProps) {
-  const [isPending, startTransition] = useTransition();
-  const [pendingAction, setPendingAction] = useState<string | null>(null);
+export function OrderDetailSheet({
+  order,
+  open,
+  onClose,
+}: OrderDetailSheetProps) {
+  const [isPending, startTransition] = useTransition()
+  const [pendingAction, setPendingAction] = useState<string | null>(null)
 
-  if (!order) return null;
+  if (!order) return null
 
-  const subtotal = order.order_items.reduce((sum, i) => sum + i.price * i.qty, 0);
-  const taxRate = 0.08;
-  const taxAmount = subtotal * taxRate;
-  const shippingCost = subtotal >= 100 ? 0 : 9.99;
-  const activityLog = buildActivityLog(order);
+  const subtotal = order.order_items.reduce(
+    (sum, i) => sum + i.price * i.qty,
+    0
+  )
+  const taxRate = 0.08
+  const taxAmount = subtotal * taxRate
+  const shippingCost = subtotal >= 100 ? 0 : 9.99
+  const activityLog = buildActivityLog(order)
 
   const runAction = (key: string, fn: () => Promise<{ error?: string }>) => {
-    setPendingAction(key);
+    setPendingAction(key)
     startTransition(async () => {
-      const res = await fn();
-      setPendingAction(null);
-      if (res.error) toast.error(res.error);
-      else toast.success("Order updated.");
-    });
-  };
+      const res = await fn()
+      setPendingAction(null)
+      if (res.error) toast.error(res.error)
+      else toast.success("Order updated.")
+    })
+  }
 
-  const isBusy = isPending;
+  const isBusy = isPending
 
   return (
     <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
@@ -552,91 +618,59 @@ export function OrderDetailSheet({ order, open, onClose }: OrderDetailSheetProps
 
             {/* 3. Payment Information */}
             <Section title="Payment Information" icon={CreditCard}>
-             <div className="rounded-lg border bg-card shadow-sm overflow-hidden">
-  {/* Header */}
-  <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/40">
-    <span className="text-sm font-medium text-foreground">
-      Payment
-    </span>
-    <IsPaidBadge isPaid={order.is_paid} />
-  </div>
+              <div className="overflow-hidden rounded-lg border bg-card shadow-sm">
+                {/* Header */}
+                <div className="flex items-center justify-between border-b bg-muted/40 px-4 py-3">
+                  <span className="text-sm font-medium text-foreground">
+                    Payment
+                  </span>
+                  <IsPaidBadge isPaid={order.is_paid} />
+                </div>
 
-  {/* Content */}
-  <div className="divide-y">
-    <InfoRow
-      label="Square Order ID"
-      value={
-        order.square_order_id ? (
-          <span className="truncate">{order.square_order_id}</span>
-        ) : (
-          <span className="italic text-muted-foreground">Not available</span>
-        )
-      }
-      mono
-      copyValue={order.square_order_id ?? undefined}
-    />
+                {/* Content */}
+                <div className="divide-y">
+                  <InfoRow
+                    label="Square Order ID"
+                    value={
+                      order.square_order_id ? (
+                        <span className="truncate">
+                          {order.square_order_id}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground italic">
+                          Not available
+                        </span>
+                      )
+                    }
+                    mono
+                    copyValue={order.square_order_id ?? undefined}
+                  />
 
-    <InfoRow
-      label="Payment Link ID"
-      value={
-        order.payment_link_id ? (
-          <span className="truncate">{order.payment_link_id}</span>
-        ) : (
-          <span className="italic text-muted-foreground">Not available</span>
-        )
-      }
-      mono
-      copyValue={order.payment_link_id ?? undefined}
-    />
-  </div>
-</div>
+                  <InfoRow
+                    label="Payment Link ID"
+                    value={
+                      order.payment_link_id ? (
+                        <span className="truncate">
+                          {order.payment_link_id}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground italic">
+                          Not available
+                        </span>
+                      )
+                    }
+                    mono
+                    copyValue={order.payment_link_id ?? undefined}
+                  />
+                </div>
+              </div>
             </Section>
 
             <Separator />
 
-            {/* 4. Fulfillment / Shipping */}
-            <Section title="Fulfillment & Shipping" icon={Truck}>
-              <div className="mb-3 divide-y divide-border overflow-hidden rounded-lg border border-border bg-muted/30">
-                <InfoRow
-                  label="Fulfillment"
-                  value={
-                    <span
-                      className={cn(
-                        "font-medium",
-                        order.status === "COMPLETED"
-                          ? "text-status-completed"
-                          : order.status === "DISPATCHED"
-                            ? "text-status-dispatched"
-                            : "text-muted-foreground"
-                      )}
-                    >
-                      {order.status === "COMPLETED"
-                        ? "Fulfilled"
-                        : order.status === "DISPATCHED"
-                          ? "Shipped"
-                          : order.status === "CANCELLED"
-                            ? "Cancelled"
-                            : "Pending"}
-                    </span>
-                  }
-                />
-                <InfoRow
-                  label="Shipping method"
-                  value={
-                    <span className="text-muted-foreground italic">
-                      Standard shipping
-                    </span>
-                  }
-                />
-                <InfoRow
-                  label="Tracking"
-                  value={
-                    <span className="text-muted-foreground italic">
-                      No tracking number
-                    </span>
-                  }
-                />
-              </div>
+            {/* 4.  Shipping */}
+            <Section title="Shipping" icon={Truck}>
+            
               <FulfillmentTimeline status={order.status} />
             </Section>
 

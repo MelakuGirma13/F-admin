@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client"
 import {
   type Order,
   type OrderItem,
@@ -7,23 +8,15 @@ import {
 } from "@/types/orders"
 import db from "./db"
 
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
 /**
- * Fetch a single order by ID including its line items.
- * Throws if not found.
+ * Single source of truth for mapping Prisma Order models to the Domain Order interface.
+ * Any future fields added to the database only need to be updated here.
  */
-export async function getOrderById(id: string): Promise<Order> {
-  const order = await db.order.findUnique({
-    where: { id },
-    include: {
-      order_items: true,
-    },
-  })
-
-  if (!order) {
-    throw new Error(`Order not found`)
-  }
-
-  // Map Prisma result to your Order interface
+function mapPrismaToOrder(order: any): Order {
   return {
     id: order.id,
     customer: order.email || "", // fallback: use email as customer name
@@ -32,14 +25,18 @@ export async function getOrderById(id: string): Promise<Order> {
     status: order.status as OrderStatus,
     is_paid: order.is_paid,
     payment_link_id: order.payment_link_id,
-    square_order_id:order.square_order_id,
+    square_order_id: order.square_order_id,
     total: Number(order.order_total),
+    tax: Number(order.tax),
+    shipping: Number(order.shipping),
     created_at: order.created_at.toISOString(),
     updated_at: order.updated_at.toISOString(),
     order_items: order.order_items.map(
-      (item): OrderItem => ({
-        id: Number(item.id),
+      (item: any): OrderItem => ({
+        id: item.id,
         order_id: item.order_id,
+        product_id: item.product_id,
+        size: item.size,
         name: item.product_name,
         sku: null,
         qty: item.quantity,
@@ -50,8 +47,29 @@ export async function getOrderById(id: string): Promise<Order> {
   }
 }
 
+// ============================================================================
+// DATA ACCESS LAYER
+// ============================================================================
+
 /**
- * Fetch a paginated, filtered, sorted list of orders from Supabase.
+ * Fetch a single order by ID including its line items.
+ * Throws if not found.
+ */
+export async function getOrderById(id: string): Promise<Order> {
+  const order = await db.order.findUnique({
+    where: { id },
+    include: { order_items: true },
+  })
+
+  if (!order) {
+    throw new Error(`Order not found`)
+  }
+
+  return mapPrismaToOrder(order)
+}
+
+/**
+ * Fetch a paginated, filtered, sorted list of orders.
  */
 export async function getOrders(
   params: OrdersFilterParams
@@ -67,38 +85,36 @@ export async function getOrders(
     dateFrom,
     dateTo,
   } = params
+
   const skip = (page - 1) * pageSize
   const take = pageSize
 
-  // ---------- Build WHERE clause ----------
-  const where: any = {}
+  // Restored Type Safety using Prisma's generated types
+  const where: Prisma.OrderWhereInput = {}
 
-  // Status filter
   if (status !== "ALL") {
     where.status = status
   }
 
-  // Paid / unpaid filter
   if (isPaid === "paid") {
     where.is_paid = true
   } else if (isPaid === "unpaid") {
     where.is_paid = false
   }
 
-  // Date range filters
   if (dateFrom) {
     where.created_at = { gte: new Date(dateFrom) }
   }
+  
   if (dateTo) {
     const nextDay = new Date(dateTo)
     nextDay.setDate(nextDay.getDate() + 1)
     where.created_at = {
-      ...(where.created_at || {}),
+      ...(typeof where.created_at === "object" ? where.created_at : {}),
       lt: nextDay,
     }
   }
 
-  // Search filter (id, email, order_number)
   if (search) {
     where.OR = [
       { id: { contains: search, mode: "insensitive" } },
@@ -107,8 +123,6 @@ export async function getOrders(
     ]
   }
 
-  // ---------- Sorting ----------
-  // Map sortField to actual column names in the Order model
   const fieldMap: Record<string, string> = {
     created_at: "created_at",
     total: "order_total",
@@ -116,49 +130,25 @@ export async function getOrders(
     email: "email",
     id: "id",
   }
+  
   const orderByField = fieldMap[sortField] || "created_at"
-  const orderBy: any = { [orderByField]: sortDir === "asc" ? "asc" : "desc" }
+  const orderBy: Prisma.OrderOrderByWithRelationInput = { 
+    [orderByField]: sortDir === "asc" ? "asc" : "desc" 
+  }
 
-  // ---------- Count total (for pagination) ----------
-  const total = await db.order.count({ where })
-
-  // ---------- Fetch orders with their items ----------
-  const ordersData = await db.order.findMany({
-    where,
-    skip,
-    take,
-    orderBy,
-    include: {
-      order_items: true, // include all order item fields
-    },
-  })
-
-  // ---------- Map Prisma result to your Order interface ----------
-  const orders: Order[] = ordersData.map((order) => ({
-    id: order.id,
-    customer: order.email || "",
-    email: order.email || "",
-    order_number: order.order_number,
-    status: order.status as OrderStatus,
-    is_paid: order.is_paid,
-    payment_link_id: order.payment_link_id,
-    square_order_id:order.square_order_id,
-    total: Number(order.order_total),
-    created_at: order.created_at.toISOString(),
-    updated_at: order.updated_at.toISOString(),
-    order_items: order.order_items.map((item) => ({
-      id: Number(item.id),
-      order_id: item.order_id,
-      name: item.product_name,
-      sku: null,
-      qty: item.quantity,
-      price: Number(item.price),
-      image_url: item.product_image,
-    })) as OrderItem[],
-  }))
+  const [total, ordersData] = await Promise.all([
+    db.order.count({ where }),
+    db.order.findMany({
+      where,
+      skip,
+      take,
+      orderBy,
+      include: { order_items: true },
+    })
+  ])
 
   return {
-    orders,
+    orders: ordersData.map(mapPrismaToOrder),
     total,
     page,
     pageSize,
@@ -172,10 +162,9 @@ export async function getOrders(
 export async function getOrderCountByStatus(
   status: OrderStatus
 ): Promise<number> {
-  const count = await db.order.count({
+  return db.order.count({
     where: { status: status as OrderStatus },
   })
-  return count
 }
 
 /**
@@ -185,40 +174,13 @@ export async function updateOrderStatus(
   orderId: string,
   status: OrderStatus
 ): Promise<Order> {
-  // Update the order status
   const updatedOrder = await db.order.update({
     where: { id: orderId },
     data: { status: status as OrderStatus },
-    include: {
-      order_items: true,
-    },
+    include: { order_items: true },
   })
 
-  // Map to your Order interface
-  return {
-    id: updatedOrder.id,
-    customer: updatedOrder.email || "",
-    email: updatedOrder.email || "",
-    order_number: updatedOrder.order_number,
-    status: updatedOrder.status as OrderStatus,
-    is_paid: updatedOrder.is_paid,
-    payment_link_id: updatedOrder.payment_link_id,
-    square_order_id:updatedOrder.square_order_id,
-    total: Number(updatedOrder.order_total),
-    created_at: updatedOrder.created_at.toISOString(),
-    updated_at: updatedOrder.updated_at.toISOString(),
-    order_items: updatedOrder.order_items.map(
-      (item): OrderItem => ({
-        id: Number(item.id),
-        order_id: item.order_id,
-        name: item.product_name,
-        sku: null,
-        qty: item.quantity,
-        price: Number(item.price),
-        image_url: item.product_image,
-      })
-    ),
-  }
+  return mapPrismaToOrder(updatedOrder)
 }
 
 /**
@@ -231,72 +193,19 @@ export async function toggleOrderPaid(
   const updatedOrder = await db.order.update({
     where: { id: orderId },
     data: { is_paid: isPaid },
-    include: {
-      order_items: true,
-    },
+    include: { order_items: true },
   })
 
-  return {
-    id: updatedOrder.id,
-    customer: updatedOrder.email || "",
-    email: updatedOrder.email || "",
-    order_number: updatedOrder.order_number,
-    status: updatedOrder.status as OrderStatus,
-    is_paid: updatedOrder.is_paid,
-    payment_link_id: updatedOrder.payment_link_id,
-    square_order_id:updatedOrder.square_order_id,
-    total: Number(updatedOrder.order_total),
-    created_at: updatedOrder.created_at.toISOString(),
-    updated_at: updatedOrder.updated_at.toISOString(),
-    order_items: updatedOrder.order_items.map(
-      (item): OrderItem => ({
-        id: Number(item.id),
-        order_id: item.order_id,
-        name: item.product_name,
-        sku: null,
-        qty: item.quantity,
-        price: Number(item.price),
-        image_url: item.product_image,
-      })
-    ),
-  }
+  return mapPrismaToOrder(updatedOrder)
 }
+
 /**
- * Cancel a single order (sets status to "cancelled").
+ * Cancel a single order.
+ * Now utilizes existing logic rather than duplicating a database call.
  */
 export async function cancelOrder(orderId: string): Promise<Order> {
-  const cancelledOrder = await db.order.update({
-    where: { id: orderId },
-    data: { status: "CANCELLED" },
-    include: {
-      order_items: true,
-    },
-  })
-
-  return {
-    id: cancelledOrder.id,
-    customer: cancelledOrder.email || "",
-    email: cancelledOrder.email || "",
-    order_number: cancelledOrder.order_number,
-    status: cancelledOrder.status as OrderStatus,
-    is_paid: cancelledOrder.is_paid,
-    payment_link_id: cancelledOrder.payment_link_id,
-    square_order_id:cancelledOrder.square_order_id,
-    total: Number(cancelledOrder.order_total),
-    created_at: cancelledOrder.created_at.toISOString(),
-    updated_at: cancelledOrder.updated_at.toISOString(),
-    order_items: cancelledOrder.order_items.map(
-      (item): OrderItem => ({
-        id: Number(item.id),
-        order_id: item.order_id,
-        name: item.product_name,
-        sku: null,
-        qty: item.quantity,
-        price: Number(item.price),
-        image_url: item.product_image,
-      })
-    ),
-  }
+  // Assuming "CANCELLED" maps to a valid OrderStatus in your types
+  return updateOrderStatus(orderId, "CANCELLED" as OrderStatus)
 }
 
 /**
@@ -307,14 +216,8 @@ export async function bulkUpdateStatus(
   status: OrderStatus
 ): Promise<void> {
   await db.order.updateMany({
-    where: {
-      id: {
-        in: orderIds,
-      },
-    },
-    data: {
-      status: status as OrderStatus,
-    },
+    where: { id: { in: orderIds } },
+    data: { status: status as OrderStatus },
   })
 }
 
@@ -326,13 +229,7 @@ export async function bulkMarkPaid(
   isPaid: boolean
 ): Promise<void> {
   await db.order.updateMany({
-    where: {
-      id: {
-        in: orderIds,
-      },
-    },
-    data: {
-      is_paid: isPaid,
-    },
+    where: { id: { in: orderIds } },
+    data: { is_paid: isPaid },
   })
 }

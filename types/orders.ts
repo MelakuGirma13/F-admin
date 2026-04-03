@@ -27,12 +27,14 @@ export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
 
 // Matches the `order_items` table
 export interface OrderItem {
-  id: number;
+  id: string;
   order_id: string;
+  product_id: string;
   name: string;
   sku: string | null;
   qty: number;
   price: number;
+  size: string;
   image_url: string | null;
 }
 
@@ -46,6 +48,8 @@ export interface Order {
   is_paid: boolean;
   payment_link_id: string | null;
   square_order_id: string | null;
+  tax: number;
+  shipping: number;
   total: number;
   created_at: string;
   updated_at: string;
