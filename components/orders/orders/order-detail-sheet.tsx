@@ -43,7 +43,7 @@ import { cn } from "@/lib/utils";
 import { OrderStatusBadge, IsPaidBadge } from "./order-status-badge";
 import type { Order, OrderStatus } from "@/types/orders";
 import { toggleOrderPaidAction, updateOrderStatusAction, cancelOrderAction } from "@/app/actions/orders/orders";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -142,7 +142,7 @@ function InfoRow({
   href?: string;
 }) {
   return (
-    <div className="flex items-start justify-between gap-4 py-1.5">
+    <div className="flex items-start justify-between gap-4 px-4 py-2.5">
       <span className="text-xs text-muted-foreground shrink-0 w-28">{label}</span>
       <span
         className={cn(
@@ -178,24 +178,24 @@ type TimelineStep = {
 };
 
 const TIMELINE_STEPS: TimelineStep[] = [
-  { key: "placed",     label: "Order Placed",    description: "Order received and confirmed" },
-  { key: "processing", label: "Processing",       description: "Items being prepared" },
-  { key: "dispatched", label: "Dispatched",       description: "Package handed to carrier" },
-  { key: "completed",  label: "Delivered",        description: "Order delivered to customer" },
+  { key: "ORDER_PLACED",     label: "Order Placed",    description: "Order received and confirmed" },
+  { key: "PROCESSING", label: "Processing",       description: "Items being prepared" },
+  { key: "DISPATCHED", label: "Dispatched",       description: "Package handed to carrier" },
+  { key: "COMPLETED",  label: "Delivered",        description: "Order delivered to customer" },
 ];
 
 const STATUS_STEP_INDEX: Partial<Record<OrderStatus, number>> = {
-  pending:     -1,
-  placed:      0,
-  processing:  1,
-  dispatched:  2,
-  completed:   3,
-  cancelled:   -2,
+  PENDING:     -1,
+  ORDER_PLACED:      0,
+  PROCESSING:  1,
+  DISPATCHED:  2,
+  COMPLETED:   3,
+  CANCELLED:   -2,
 };
 
 function FulfillmentTimeline({ status }: { status: OrderStatus }) {
   const currentIdx = STATUS_STEP_INDEX[status] ?? -1;
-  const isCancelled = status === "cancelled";
+  const isCancelled = status === "CANCELLED";
 
   if (isCancelled) {
     return (
@@ -279,16 +279,16 @@ function buildActivityLog(order: Order): ActivityEvent[] {
       color: "text-status-completed",
     });
   }
-  if (order.status === "processing") {
+  if (order.status === "PROCESSING") {
     events.push({ label: "Order processing started", time: order.updated_at, icon: Package, color: "text-status-processing" });
   }
-  if (order.status === "dispatched") {
+  if (order.status === "DISPATCHED") {
     events.push({ label: "Order dispatched", time: order.updated_at, icon: Truck, color: "text-status-dispatched" });
   }
-  if (order.status === "completed") {
+  if (order.status === "COMPLETED") {
     events.push({ label: "Order delivered", time: order.updated_at, icon: CheckCircle2, color: "text-status-completed" });
   }
-  if (order.status === "cancelled") {
+  if (order.status === "CANCELLED") {
     events.push({ label: "Order cancelled", time: order.updated_at, icon: XCircle, color: "text-destructive-foreground" });
   }
   return events.reverse();
@@ -355,19 +355,18 @@ export function OrderDetailSheet({ order, open, onClose }: OrderDetailSheetProps
 
   return (
     <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
-      <SheetContent className="w-full sm:max-w-[560px] p-0 flex flex-col gap-0 [&>button]:top-5 [&>button]:right-5">
-
+      <SheetContent className="flex w-full max-w-none flex-col gap-0 p-0 sm:w-[95vw] [&>button]:top-5 [&>button]:right-5">
         {/* ── Header ──────────────────────────────────────────────────── */}
-        <SheetHeader className="px-6 pt-6 pb-5 border-b border-border shrink-0">
+        <SheetHeader className="shrink-0 border-b border-border px-6 pt-6 pb-5">
           <div className="flex items-start justify-between gap-3 pr-6">
-            <div className="space-y-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
+            <div className="min-w-0 space-y-1">
+              <div className="flex flex-wrap items-center gap-2">
                 <SheetTitle className="font-mono text-sm font-semibold tracking-tight text-foreground">
-                  {order.id}
+                  {order.order_number}
                 </SheetTitle>
-                <CopyButton value={order.id} label="Order ID" />
+                <CopyButton value={order.order_number} label="Order Number" />
               </div>
-              <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+              <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <Clock className="h-3 w-3" />
                 {formatDate(order.created_at)}
               </p>
@@ -380,7 +379,7 @@ export function OrderDetailSheet({ order, open, onClose }: OrderDetailSheetProps
 
           {/* Quick actions */}
           <div className="flex flex-wrap gap-2 pt-3">
-            <Button
+            {/* <Button
               variant="outline"
               size="sm"
               className="h-8 text-xs gap-1.5"
@@ -389,14 +388,16 @@ export function OrderDetailSheet({ order, open, onClose }: OrderDetailSheetProps
             >
               <Printer className="h-3.5 w-3.5" />
               Print
-            </Button>
+            </Button> */}
             <Button
               variant="outline"
               size="sm"
-              className="h-8 text-xs gap-1.5"
+              className="h-8 gap-1.5 text-xs"
               disabled={isBusy || order.is_paid}
               onClick={() =>
-                runAction("refund", () => toggleOrderPaidAction(order.id, false))
+                runAction("refund", () =>
+                  toggleOrderPaidAction(order.id, false)
+                )
               }
             >
               {pendingAction === "refund" ? (
@@ -406,18 +407,19 @@ export function OrderDetailSheet({ order, open, onClose }: OrderDetailSheetProps
               )}
               Refund
             </Button>
+
             <Button
               variant="outline"
               size="sm"
-              className="h-8 text-xs gap-1.5"
+              className="h-8 gap-1.5 text-xs"
               disabled={
                 isBusy ||
-                order.status === "completed" ||
-                order.status === "cancelled"
+                order.status === "COMPLETED" ||
+                order.status === "CANCELLED"
               }
               onClick={() =>
                 runAction("fulfill", () =>
-                  updateOrderStatusAction(order.id, "completed")
+                  updateOrderStatusAction(order.id, "COMPLETED")
                 )
               }
             >
@@ -428,11 +430,12 @@ export function OrderDetailSheet({ order, open, onClose }: OrderDetailSheetProps
               )}
               Fulfill
             </Button>
+
             <Button
               variant="outline"
               size="sm"
-              className="h-8 text-xs gap-1.5 text-destructive-foreground hover:bg-destructive/10 hover:text-destructive-foreground border-destructive/30"
-              disabled={isBusy || order.status === "cancelled"}
+              className="text-destructive-foreground hover:text-destructive-foreground h-8 gap-1.5 border-destructive/30 text-xs hover:bg-destructive/10"
+              disabled={isBusy || order.status === "CANCELLED"}
               onClick={() =>
                 runAction("cancel", () => cancelOrderAction(order.id))
               }
@@ -448,46 +451,61 @@ export function OrderDetailSheet({ order, open, onClose }: OrderDetailSheetProps
         </SheetHeader>
 
         {/* ── Scrollable body ──────────────────────────────────────────── */}
-        <ScrollArea className="flex-1 min-h-0">
-          <div className="px-6 py-5 space-y-7">
 
+        <ScrollArea className="min-h-0 flex-1">
+          <ScrollBar orientation="horizontal" />
+          <div className="space-y-7 px-6 py-5">
             {/* 1. Customer Information */}
             <Section title="Customer Information" icon={User}>
-              <div className="rounded-lg border border-border bg-muted/30 divide-y divide-border overflow-hidden">
+              <div className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-muted/30">
                 <div className="flex items-center gap-3 px-3 py-2.5">
-                  <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10">
                     <span className="text-xs font-semibold text-foreground">
-                      {order.customer.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
+                      {order.customer
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")
+                        .slice(0, 2)
+                        .toUpperCase()}
                     </span>
                   </div>
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">{order.customer}</p>
-                    <p className="text-xs text-muted-foreground truncate flex items-center gap-1">
+                    <p className="truncate text-sm font-medium text-foreground">
+                      {order.customer}
+                    </p>
+                    <p className="flex items-center gap-1 truncate text-xs text-muted-foreground">
                       <Mail className="h-3 w-3 shrink-0" />
                       {order.email}
                     </p>
                   </div>
                   <CopyButton value={order.email} label="email" />
                 </div>
-                <InfoRow label="Phone" value={<span className="text-muted-foreground italic">Not provided</span>} />
+                {/* <InfoRow label="Phone" value={<span className="text-muted-foreground italic">Not provided</span>} />
                 <div className="px-3 py-2.5">
                   <div className="flex items-start gap-1.5">
                     <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
                     <div className="text-xs text-muted-foreground italic">No address on file</div>
                   </div>
-                </div>
+                </div> */}
               </div>
             </Section>
 
             <Separator />
 
             {/* 2. Order Items */}
-            <Section title={`Order Items (${order.order_items.length})`} icon={ShoppingBag}>
-              <div className="rounded-lg border border-border overflow-hidden">
-                <div className="max-h-64 overflow-y-auto divide-y divide-border">
+            <Section
+              title={`Order Items (${order.order_items.length})`}
+              icon={ShoppingBag}
+            >
+              <div className="overflow-hidden rounded-lg border border-border bg-card">
+                <div className="max-h-[50vh] divide-y divide-border overflow-y-auto">
                   {order.order_items.map((item) => (
-                    <div key={item.id} className="flex items-center gap-3 px-3 py-3">
-                      <div className="h-11 w-11 shrink-0 rounded-md border border-border bg-muted flex items-center justify-center overflow-hidden">
+                    <div
+                      key={item.id}
+                      className="flex w-full items-center gap-3 p-3"
+                    >
+                      {/* Image / Placeholder */}
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-md border border-border bg-muted">
                         {item.image_url ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
@@ -499,22 +517,31 @@ export function OrderDetailSheet({ order, open, onClose }: OrderDetailSheetProps
                           <Package className="h-4 w-4 text-muted-foreground/50" />
                         )}
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-foreground truncate">{item.name}</p>
-                        <div className="flex flex-wrap items-center gap-2 mt-0.5">
+
+                      {/* Item details */}
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-foreground">
+                          {item.name}
+                        </p>
+                        <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1">
                           {item.sku && (
-                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 font-mono">
+                            <Badge
+                              variant="secondary"
+                              className="h-4 px-1.5 py-0 font-mono text-[10px]"
+                            >
                               {item.sku}
                             </Badge>
                           )}
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-xs whitespace-nowrap text-muted-foreground">
                             Qty {item.qty} &times; {fmt.format(item.price)}
                           </span>
                         </div>
+
+                        {/* Total price */}
+                        <span className="shrink-0 text-sm font-semibold text-foreground tabular-nums">
+                          {fmt.format(item.price * item.qty)}
+                        </span>
                       </div>
-                      <span className="text-sm font-semibold text-foreground tabular-nums shrink-0">
-                        {fmt.format(item.price * item.qty)}
-                      </span>
                     </div>
                   ))}
                 </div>
@@ -525,49 +552,89 @@ export function OrderDetailSheet({ order, open, onClose }: OrderDetailSheetProps
 
             {/* 3. Payment Information */}
             <Section title="Payment Information" icon={CreditCard}>
-              <div className="rounded-lg border border-border bg-muted/30 overflow-hidden divide-y divide-border">
-                <div className="flex items-center justify-between px-3 py-2.5">
-                  <span className="text-xs text-muted-foreground">Payment status</span>
-                  <IsPaidBadge isPaid={order.is_paid} />
-                </div>
-                <InfoRow
-                  label="Transaction ID"
-                  value={<span className="text-muted-foreground italic">N/A</span>}
-                />
-                <InfoRow
-                  label="Method"
-                  value={<span className="text-muted-foreground italic">Not recorded</span>}
-                />
-              </div>
+             <div className="rounded-lg border bg-card shadow-sm overflow-hidden">
+  {/* Header */}
+  <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/40">
+    <span className="text-sm font-medium text-foreground">
+      Payment
+    </span>
+    <IsPaidBadge isPaid={order.is_paid} />
+  </div>
+
+  {/* Content */}
+  <div className="divide-y">
+    <InfoRow
+      label="Square Order ID"
+      value={
+        order.square_order_id ? (
+          <span className="truncate">{order.square_order_id}</span>
+        ) : (
+          <span className="italic text-muted-foreground">Not available</span>
+        )
+      }
+      mono
+      copyValue={order.square_order_id ?? undefined}
+    />
+
+    <InfoRow
+      label="Payment Link ID"
+      value={
+        order.payment_link_id ? (
+          <span className="truncate">{order.payment_link_id}</span>
+        ) : (
+          <span className="italic text-muted-foreground">Not available</span>
+        )
+      }
+      mono
+      copyValue={order.payment_link_id ?? undefined}
+    />
+  </div>
+</div>
             </Section>
 
             <Separator />
 
             {/* 4. Fulfillment / Shipping */}
             <Section title="Fulfillment & Shipping" icon={Truck}>
-              <div className="rounded-lg border border-border bg-muted/30 divide-y divide-border overflow-hidden mb-3">
+              <div className="mb-3 divide-y divide-border overflow-hidden rounded-lg border border-border bg-muted/30">
                 <InfoRow
                   label="Fulfillment"
                   value={
-                    <span className={cn(
-                      "font-medium",
-                      order.status === "completed" ? "text-status-completed" :
-                      order.status === "dispatched" ? "text-status-dispatched" :
-                      "text-muted-foreground"
-                    )}>
-                      {order.status === "completed" ? "Fulfilled" :
-                       order.status === "dispatched" ? "Shipped" :
-                       order.status === "cancelled" ? "Cancelled" : "Pending"}
+                    <span
+                      className={cn(
+                        "font-medium",
+                        order.status === "COMPLETED"
+                          ? "text-status-completed"
+                          : order.status === "DISPATCHED"
+                            ? "text-status-dispatched"
+                            : "text-muted-foreground"
+                      )}
+                    >
+                      {order.status === "COMPLETED"
+                        ? "Fulfilled"
+                        : order.status === "DISPATCHED"
+                          ? "Shipped"
+                          : order.status === "CANCELLED"
+                            ? "Cancelled"
+                            : "Pending"}
                     </span>
                   }
                 />
                 <InfoRow
                   label="Shipping method"
-                  value={<span className="text-muted-foreground italic">Standard shipping</span>}
+                  value={
+                    <span className="text-muted-foreground italic">
+                      Standard shipping
+                    </span>
+                  }
                 />
                 <InfoRow
                   label="Tracking"
-                  value={<span className="text-muted-foreground italic">No tracking number</span>}
+                  value={
+                    <span className="text-muted-foreground italic">
+                      No tracking number
+                    </span>
+                  }
                 />
               </div>
               <FulfillmentTimeline status={order.status} />
@@ -577,34 +644,50 @@ export function OrderDetailSheet({ order, open, onClose }: OrderDetailSheetProps
 
             {/* 5. Order Summary */}
             <Section title="Order Summary" icon={ReceiptText}>
-              <div className="rounded-lg border border-border overflow-hidden">
+              <div className="overflow-hidden rounded-lg border border-border">
                 <div className="divide-y divide-border">
-                  <div className="flex justify-between items-center px-3 py-2.5">
-                    <span className="text-xs text-muted-foreground">Subtotal</span>
-                    <span className="text-xs tabular-nums text-foreground">{fmt.format(subtotal)}</span>
+                  <div className="flex items-center justify-between px-3 py-2.5">
+                    <span className="text-xs text-muted-foreground">
+                      Subtotal
+                    </span>
+                    <span className="text-xs text-foreground tabular-nums">
+                      {fmt.format(subtotal)}
+                    </span>
                   </div>
-                  <div className="flex justify-between items-center px-3 py-2.5">
-                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                  <div className="flex items-center justify-between px-3 py-2.5">
+                    <span className="flex items-center gap-1 text-xs text-muted-foreground">
                       <Tag className="h-3 w-3" />
                       Discount
                     </span>
-                    <span className="text-xs tabular-nums text-status-completed">—</span>
-                  </div>
-                  <div className="flex justify-between items-center px-3 py-2.5">
-                    <span className="text-xs text-muted-foreground">Tax (8%)</span>
-                    <span className="text-xs tabular-nums text-foreground">{fmt.format(taxAmount)}</span>
-                  </div>
-                  <div className="flex justify-between items-center px-3 py-2.5">
-                    <span className="text-xs text-muted-foreground">Shipping</span>
-                    <span className="text-xs tabular-nums text-foreground">
-                      {shippingCost === 0 ? (
-                        <span className="text-status-completed">Free</span>
-                      ) : fmt.format(shippingCost)}
+                    <span className="text-status-completed text-xs tabular-nums">
+                      —
                     </span>
                   </div>
-                  <div className="flex justify-between items-center px-3 py-3 bg-muted/40">
-                    <span className="text-sm font-semibold text-foreground">Total</span>
-                    <span className="text-base font-bold tabular-nums text-foreground">
+                  <div className="flex items-center justify-between px-3 py-2.5">
+                    <span className="text-xs text-muted-foreground">
+                      Tax (8%)
+                    </span>
+                    <span className="text-xs text-foreground tabular-nums">
+                      {fmt.format(taxAmount)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between px-3 py-2.5">
+                    <span className="text-xs text-muted-foreground">
+                      Shipping
+                    </span>
+                    <span className="text-xs text-foreground tabular-nums">
+                      {shippingCost === 0 ? (
+                        <span className="text-status-completed">Free</span>
+                      ) : (
+                        fmt.format(shippingCost)
+                      )}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between bg-muted/40 px-3 py-3">
+                    <span className="text-sm font-semibold text-foreground">
+                      Total
+                    </span>
+                    <span className="text-base font-bold text-foreground tabular-nums">
                       {fmt.format(order.total)}
                     </span>
                   </div>
@@ -618,18 +701,22 @@ export function OrderDetailSheet({ order, open, onClose }: OrderDetailSheetProps
             <Section title="Activity" icon={Clock}>
               <div className="space-y-1">
                 {activityLog.map((event, idx) => {
-                  const Icon = event.icon;
+                  const Icon = event.icon
                   return (
                     <div key={idx} className="flex items-start gap-3 py-2">
-                      <div className="h-7 w-7 rounded-full border border-border bg-muted flex items-center justify-center shrink-0 mt-0.5">
+                      <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border bg-muted">
                         <Icon className={cn("h-3.5 w-3.5", event.color)} />
                       </div>
-                      <div className="flex-1 min-w-0 pt-0.5">
-                        <p className="text-xs font-medium text-foreground">{event.label}</p>
-                        <p className="text-xs text-muted-foreground">{formatShort(event.time)}</p>
+                      <div className="min-w-0 flex-1 pt-0.5">
+                        <p className="text-xs font-medium text-foreground">
+                          {event.label}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatShort(event.time)}
+                        </p>
                       </div>
                     </div>
-                  );
+                  )
                 })}
               </div>
             </Section>
@@ -637,7 +724,7 @@ export function OrderDetailSheet({ order, open, onClose }: OrderDetailSheetProps
         </ScrollArea>
 
         {/* ── Sticky footer ────────────────────────────────────────────── */}
-        <div className="border-t border-border px-6 py-4 flex items-center justify-between gap-3 shrink-0 bg-card">
+        <div className="flex shrink-0 items-center justify-between gap-3 border-t border-border bg-card px-6 py-4">
           <p className="text-xs text-muted-foreground">
             Last updated {formatShort(order.updated_at)}
           </p>
@@ -652,10 +739,16 @@ export function OrderDetailSheet({ order, open, onClose }: OrderDetailSheetProps
             </Button>
             <Button
               size="sm"
-              className="h-8 text-xs gap-1.5"
-              disabled={isBusy || order.status === "completed" || order.status === "cancelled"}
+              className="h-8 gap-1.5 text-xs"
+              disabled={
+                isBusy ||
+                order.status === "COMPLETED" ||
+                order.status === "CANCELLED"
+              }
               onClick={() =>
-                runAction("fulfill", () => updateOrderStatusAction(order.id, "completed"))
+                runAction("fulfill", () =>
+                  updateOrderStatusAction(order.id, "COMPLETED")
+                )
               }
             >
               {pendingAction === "fulfill" && isBusy ? (
@@ -669,5 +762,5 @@ export function OrderDetailSheet({ order, open, onClose }: OrderDetailSheetProps
         </div>
       </SheetContent>
     </Sheet>
-  );
+  )
 }

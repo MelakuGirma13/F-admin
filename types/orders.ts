@@ -44,6 +44,8 @@ export interface Order {
   order_number: string;
   status: OrderStatus;
   is_paid: boolean;
+  payment_link_id: string | null;
+  square_order_id: string | null;
   total: number;
   created_at: string;
   updated_at: string;
