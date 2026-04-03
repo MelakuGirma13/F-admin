@@ -402,9 +402,9 @@ export function OrderDetailSheet({
     (sum, i) => sum + i.price * i.qty,
     0
   )
-  const taxRate = 0.08
-  const taxAmount = subtotal * taxRate
-  const shippingCost = subtotal >= 100 ? 0 : 9.99
+
+  const taxAmount = order.tax
+  const shippingCost = order.shipping
   const activityLog = buildActivityLog(order)
 
   const runAction = (key: string, fn: () => Promise<{ error?: string }>) => {
@@ -454,7 +454,7 @@ export function OrderDetailSheet({
             >
               <Printer className="h-3.5 w-3.5" />
               Print
-            </Button> */}
+            </Button> 
             <Button
               variant="outline"
               size="sm"
@@ -472,7 +472,7 @@ export function OrderDetailSheet({
                 <RotateCcw className="h-3.5 w-3.5" />
               )}
               Refund
-            </Button>
+            </Button>*/}
 
             <Button
               variant="outline"
@@ -670,7 +670,6 @@ export function OrderDetailSheet({
 
             {/* 4.  Shipping */}
             <Section title="Shipping" icon={Truck}>
-            
               <FulfillmentTimeline status={order.status} />
             </Section>
 
@@ -689,18 +688,7 @@ export function OrderDetailSheet({
                     </span>
                   </div>
                   <div className="flex items-center justify-between px-3 py-2.5">
-                    <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <Tag className="h-3 w-3" />
-                      Discount
-                    </span>
-                    <span className="text-status-completed text-xs tabular-nums">
-                      —
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between px-3 py-2.5">
-                    <span className="text-xs text-muted-foreground">
-                      Tax (8%)
-                    </span>
+                    <span className="text-xs text-muted-foreground">Tax</span>
                     <span className="text-xs text-foreground tabular-nums">
                       {fmt.format(taxAmount)}
                     </span>
@@ -732,7 +720,7 @@ export function OrderDetailSheet({
             <Separator />
 
             {/* 6. Activity Timeline */}
-            <Section title="Activity" icon={Clock}>
+            {/* <Section title="Activity" icon={Clock}>
               <div className="space-y-1">
                 {activityLog.map((event, idx) => {
                   const Icon = event.icon
@@ -753,7 +741,7 @@ export function OrderDetailSheet({
                   )
                 })}
               </div>
-            </Section>
+            </Section> */}
           </div>
         </ScrollArea>
 
