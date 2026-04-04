@@ -1,8 +1,7 @@
-"use client";
+"use client"
 
-import { useState, useTransition, useCallback } from "react";
-import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { toast } from "sonner";
+import { useState, useTransition, useCallback } from "react"
+import { useRouter, usePathname, useSearchParams } from "next/navigation"
 import {
   useReactTable,
   getCoreRowModel,
@@ -11,7 +10,7 @@ import {
   type SortingState,
   type VisibilityState,
   type RowSelectionState,
-} from "@tanstack/react-table";
+} from "@tanstack/react-table"
 import {
   Table,
   TableBody,
@@ -19,16 +18,16 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Button } from "@/components/ui/button";
+} from "@/components/ui/table"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Button } from "@/components/ui/button"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@/components/ui/select"
 import {
   ArrowUpDown,
   ArrowUp,
@@ -37,32 +36,46 @@ import {
   Package,
   X,
   ChevronDown,
-} from "lucide-react";
-import dynamic from "next/dynamic";
-import { OrderStatusBadge, IsPaidBadge } from "./order-status-badge";
-import { OrderRowActions } from "./order-row-actions";
-import { OrdersFilters } from "./orders-filters";
+} from "lucide-react"
+import dynamic from "next/dynamic"
+import { OrderStatusBadge, IsPaidBadge } from "./order-status-badge"
+import { OrderRowActions } from "./order-row-actions"
+import { OrdersFilters } from "./orders-filters"
 
 // Dynamically import the heavy sheet — only needed after user interaction
 const OrderDetailSheet = dynamic(
   () => import("./order-detail-sheet").then((m) => m.OrderDetailSheet),
   { ssr: false }
-);
-import { OrdersPagination } from "./orders-pagination";
-import { bulkUpdateStatusAction, bulkMarkPaidAction } from "@/app/actions/orders/orders";
-import { SortField, SortDir, Order, OrderStatus, ORDER_STATUSES, ORDER_STATUS_LABELS } from "@/types/orders";
+)
+import { OrdersPagination } from "./orders-pagination"
+import {
+  bulkUpdateStatusAction,
+  bulkMarkPaidAction,
+} from "@/app/actions/orders/orders"
+import {
+  SortField,
+  SortDir,
+  Order,
+  OrderStatus,
+  ORDER_STATUSES,
+  ORDER_STATUS_LABELS,
+  ORDER_STATUSES_ACTION_LIST,
+} from "@/types/orders"
+import { gooeyToast } from "@/components/ui/goey-toaster"
 
 // ─── Formatters ──────────────────────────────────────────────────────────────
 
 const formatCurrency = (n: number) =>
-  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
+  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(
+    n
+  )
 
 const formatDate = (d: string) =>
   new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
-  }).format(new Date(d));
+  }).format(new Date(d))
 
 // ─── Sort button ─────────────────────────────────────────────────────────────
 
@@ -74,22 +87,22 @@ function SortButton({
   onSort,
   disabled,
 }: {
-  label: string;
-  field: SortField;
-  currentField: SortField;
-  currentDir: SortDir;
-  onSort: (field: SortField) => void;
-  disabled: boolean;
+  label: string
+  field: SortField
+  currentField: SortField
+  currentDir: SortDir
+  onSort: (field: SortField) => void
+  disabled: boolean
 }) {
-  const isActive = currentField === field;
+  const isActive = currentField === field
   return (
     <button
-      className="flex items-center gap-1 group disabled:opacity-50"
+      className="group flex items-center gap-1 disabled:opacity-50"
       onClick={() => onSort(field)}
       disabled={disabled}
       aria-label={`Sort by ${label}`}
     >
-      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider group-hover:text-foreground transition-colors">
+      <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase transition-colors group-hover:text-foreground">
         {label}
       </span>
       {isActive ? (
@@ -99,20 +112,26 @@ function SortButton({
           <ArrowDown className="h-3.5 w-3.5 text-foreground" />
         )
       ) : (
-        <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors" />
+        <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground/40 transition-colors group-hover:text-muted-foreground" />
       )}
     </button>
-  );
+  )
 }
 
 // ─── Skeleton ────────────────────────────────────────────────────────────────
 
-function TableSkeleton({ rows = 10, cols = 9 }: { rows?: number; cols?: number }) {
+function TableSkeleton({
+  rows = 10,
+  cols = 9,
+}: {
+  rows?: number
+  cols?: number
+}) {
   return (
     <div className="overflow-x-auto">
       <Table>
         <TableHeader>
-          <TableRow className="hover:bg-transparent border-border">
+          <TableRow className="border-border hover:bg-transparent">
             {Array.from({ length: cols }).map((_, i) => (
               <TableHead key={i}>
                 <div className="h-4 w-20 animate-pulse rounded bg-muted" />
@@ -136,30 +155,30 @@ function TableSkeleton({ rows = 10, cols = 9 }: { rows?: number; cols?: number }
         </TableBody>
       </Table>
     </div>
-  );
+  )
 }
 
 // ─── Props ───────────────────────────────────────────────────────────────────
 
 interface OrdersTableProps {
-  orders: Order[];
-  total: number;
-  page: number;
-  pageSize: number;
-  totalPages: number;
-  search: string;
-  status: OrderStatus | "ALL";
-  isPaid: "all" | "paid" | "unpaid";
-  dateFrom: string;
-  dateTo: string;
-  sortField: SortField;
-  sortDir: SortDir;
-  isLoading?: boolean;
+  orders: Order[]
+  total: number
+  page: number
+  pageSize: number
+  totalPages: number
+  search: string
+  status: OrderStatus | "ALL"
+  isPaid: "all" | "paid" | "unpaid"
+  dateFrom: string
+  dateTo: string
+  sortField: SortField
+  sortDir: SortDir
+  isLoading?: boolean
 }
 
 // ─── Column helper ────────────────────────────────────────────────────────────
 
-const col = createColumnHelper<Order>();
+const col = createColumnHelper<Order>()
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
@@ -178,32 +197,32 @@ export function OrdersTable({
   sortDir,
   isLoading = false,
 }: OrdersTableProps) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const [isPending, startTransition] = useTransition();
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const [isPending, startTransition] = useTransition()
 
-  const [detailOrder, setDetailOrder] = useState<Order | null>(null);
-  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  const [detailOrder, setDetailOrder] = useState<Order | null>(null)
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
 
   // Server-driven sorting state (controlled externally via URL)
-  const sorting: SortingState = [{ id: sortField, desc: sortDir === "desc" }];
+  const sorting: SortingState = [{ id: sortField, desc: sortDir === "desc" }]
 
   // ── Push sort to URL ──────────────────────────────────────────────────────
   const pushSort = useCallback(
     (field: SortField) => {
-      const params = new URLSearchParams(searchParams.toString());
+      const params = new URLSearchParams(searchParams.toString())
       const newDir: SortDir =
-        field === sortField && sortDir === "desc" ? "asc" : "desc";
-      params.set("sort", `${field}.${newDir}`);
-      params.set("page", "1");
+        field === sortField && sortDir === "desc" ? "asc" : "desc"
+      params.set("sort", `${field}.${newDir}`)
+      params.set("page", "1")
       startTransition(() => {
-        router.push(`${pathname}?${params.toString()}`);
-      });
+        router.push(`${pathname}?${params.toString()}`)
+      })
     },
     [pathname, router, searchParams, sortField, sortDir]
-  );
+  )
 
   // ── TanStack columns ──────────────────────────────────────────────────────
   const columns = [
@@ -213,7 +232,9 @@ export function OrdersTable({
       header: ({ table }) => (
         <Checkbox
           checked={table.getIsAllPageRowsSelected()}
-          data-state={table.getIsSomePageRowsSelected() ? "indeterminate" : undefined}
+          data-state={
+            table.getIsSomePageRowsSelected() ? "indeterminate" : undefined
+          }
           onCheckedChange={(v) => table.toggleAllPageRowsSelected(!!v)}
           aria-label="Select all"
           className="translate-y-px"
@@ -232,13 +253,13 @@ export function OrdersTable({
       id: "order_number",
       enableHiding: false,
       header: () => (
-        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+        <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
           Order ID
         </span>
       ),
       cell: (info) => (
         <button
-          className="font-mono text-sm font-medium text-foreground hover:text-primary hover:underline transition-colors"
+          className="font-mono text-sm font-medium text-foreground transition-colors hover:text-primary hover:underline"
           onClick={() => setDetailOrder(info.row.original)}
         >
           {info.getValue<string>()}
@@ -293,7 +314,7 @@ export function OrdersTable({
         </div>
       ),
       cell: (info) => (
-        <div className="text-sm font-semibold text-foreground text-right tabular-nums">
+        <div className="text-right text-sm font-semibold text-foreground tabular-nums">
           {formatCurrency(info.getValue())}
         </div>
       ),
@@ -314,7 +335,7 @@ export function OrdersTable({
     col.accessor("is_paid", {
       id: "is_paid",
       header: () => (
-        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+        <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
           Payment
         </span>
       ),
@@ -323,7 +344,7 @@ export function OrdersTable({
     col.accessor("order_items", {
       id: "order_items",
       header: () => (
-        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider text-center block">
+        <span className="block text-center text-xs font-semibold tracking-wider text-muted-foreground uppercase">
           Items
         </span>
       ),
@@ -348,7 +369,7 @@ export function OrdersTable({
         />
       ),
       cell: (info) => (
-        <span className="text-sm text-muted-foreground whitespace-nowrap">
+        <span className="text-sm whitespace-nowrap text-muted-foreground">
           {formatDate(info.getValue())}
         </span>
       ),
@@ -360,7 +381,7 @@ export function OrdersTable({
         <OrderRowActions order={row.original} onViewDetails={setDetailOrder} />
       ),
     }),
-  ];
+  ]
 
   // ── TanStack table instance ───────────────────────────────────────────────
   const table = useReactTable({
@@ -372,43 +393,49 @@ export function OrdersTable({
       columnVisibility,
     },
     getRowId: (row) => row.id,
-    manualSorting: true,    // server-side
+    manualSorting: true, // server-side
     manualPagination: true, // server-side
     pageCount: totalPages,
     enableRowSelection: true,
     onRowSelectionChange: setRowSelection,
     onColumnVisibilityChange: setColumnVisibility,
     getCoreRowModel: getCoreRowModel(),
-  });
+  })
 
-  const selectedIds = Object.keys(rowSelection).filter((id) => rowSelection[id]);
+  const selectedIds = Object.keys(rowSelection).filter((id) => rowSelection[id])
 
   // ── Bulk actions ──────────────────────────────────────────────────────────
   function bulkStatus(s: string) {
-    if (!ORDER_STATUSES.includes(s as OrderStatus)) return;
+    if (!ORDER_STATUSES_ACTION_LIST.includes(s as OrderStatus)) return
     startTransition(async () => {
-      const res = await bulkUpdateStatusAction(selectedIds, s as OrderStatus);
-      if (res.error) toast.error(res.error);
+      const res = await bulkUpdateStatusAction(selectedIds, s as OrderStatus)
+      if (res.error)
+        gooeyToast.error("", {
+          description: res.error,
+        })
       else {
-        toast.success(
-          `${selectedIds.length} order${selectedIds.length > 1 ? "s" : ""} moved to "${ORDER_STATUS_LABELS[s as OrderStatus]}".`
-        );
-        setRowSelection({});
+        gooeyToast.success("status updated.", {
+          description: `${selectedIds.length} order${selectedIds.length > 1 ? "s" : ""} moved to "${ORDER_STATUS_LABELS[s as OrderStatus]}".`,
+        })
+        setRowSelection({})
       }
-    });
+    })
   }
 
   function bulkPaid(paid: boolean) {
     startTransition(async () => {
-      const res = await bulkMarkPaidAction(selectedIds, paid);
-      if (res.error) toast.error(res.error);
+      const res = await bulkMarkPaidAction(selectedIds, paid)
+      if (res.error)
+        gooeyToast.error("", {
+          description: res.error,
+        })
       else {
-        toast.success(
-          `${selectedIds.length} order${selectedIds.length > 1 ? "s" : ""} marked as ${paid ? "paid" : "unpaid"}.`
-        );
-        setRowSelection({});
+        gooeyToast.success("Payment status updated.", {
+          description: `${selectedIds.length} order${selectedIds.length > 1 ? "s" : ""} marked as ${paid ? "paid" : "unpaid"}.`,
+        })
+        setRowSelection({})
       }
-    });
+    })
   }
 
   return (
@@ -429,18 +456,17 @@ export function OrdersTable({
 
       {/* ── Bulk action bar ────────────────────────────────────────────── */}
       {selectedIds.length > 0 && (
-        <div className="flex flex-wrap items-center gap-3 px-5 py-2.5 border-b border-border bg-muted/40">
+        <div className="flex flex-wrap items-center gap-3 border-b border-border bg-muted/40 px-5 py-2.5">
           <span className="text-sm font-medium text-foreground">
             {selectedIds.length} selected
           </span>
-          <div className="flex flex-wrap items-center gap-2 ml-2">
+          <div className="ml-2 flex flex-wrap items-center gap-2">
             <Select onValueChange={bulkStatus} disabled={isPending}>
-              <SelectTrigger className="h-8 text-xs gap-1 w-40">
+              <SelectTrigger className="h-8 w-40 gap-1 text-xs">
                 <SelectValue placeholder="Set status" />
-                <ChevronDown className="h-3 w-3 opacity-50" />
               </SelectTrigger>
               <SelectContent>
-                {ORDER_STATUSES.map((s) => (
+                {ORDER_STATUSES_ACTION_LIST.map((s) => (
                   <SelectItem key={s} value={s} className="text-xs">
                     {ORDER_STATUS_LABELS[s]}
                   </SelectItem>
@@ -467,12 +493,12 @@ export function OrdersTable({
             </Button>
           </div>
           {isPending && (
-            <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground ml-1" />
+            <Loader2 className="ml-1 h-3.5 w-3.5 animate-spin text-muted-foreground" />
           )}
           <Button
             variant="ghost"
             size="icon"
-            className="h-7 w-7 ml-auto text-muted-foreground"
+            className="ml-auto h-7 w-7 text-muted-foreground"
             onClick={() => setRowSelection({})}
             aria-label="Clear selection"
           >
@@ -485,25 +511,32 @@ export function OrdersTable({
       {isLoading ? (
         <TableSkeleton rows={pageSize} />
       ) : orders.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 gap-3 text-muted-foreground">
+        <div className="flex flex-col items-center justify-center gap-3 py-20 text-muted-foreground">
           <Package className="h-10 w-10 opacity-40" />
           <p className="text-sm font-medium">No orders found</p>
-          <p className="text-xs">Try adjusting your search or filter criteria.</p>
+          <p className="text-xs">
+            Try adjusting your search or filter criteria.
+          </p>
         </div>
       ) : (
         <div className="overflow-x-auto">
           <Table>
             <TableHeader className="sticky top-0 z-10 bg-card shadow-[0_1px_0_0_hsl(var(--border))]">
               {table.getHeaderGroups().map((hg) => (
-                <TableRow key={hg.id} className="hover:bg-transparent border-0">
+                <TableRow key={hg.id} className="border-0 hover:bg-transparent">
                   {hg.headers.map((header) => (
                     <TableHead
                       key={header.id}
-                      className={header.id === "select" ? "w-10 pl-5" : undefined}
+                      className={
+                        header.id === "select" ? "w-10 pl-5" : undefined
+                      }
                     >
                       {header.isPlaceholder
                         ? null
-                        : flexRender(header.column.columnDef.header, header.getContext())}
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
                     </TableHead>
                   ))}
                 </TableRow>
@@ -514,14 +547,19 @@ export function OrdersTable({
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() ? "selected" : undefined}
-                  className="group border-border hover:bg-muted/40 data-[state=selected]:bg-primary/5 transition-colors"
+                  className="group border-border transition-colors hover:bg-muted/40 data-[state=selected]:bg-primary/5"
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell
                       key={cell.id}
-                      className={cell.column.id === "select" ? "pl-5" : undefined}
+                      className={
+                        cell.column.id === "select" ? "pl-5" : undefined
+                      }
                     >
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext()
+                      )}
                     </TableCell>
                   ))}
                 </TableRow>
@@ -548,5 +586,5 @@ export function OrdersTable({
         onClose={() => setDetailOrder(null)}
       />
     </>
-  );
+  )
 }

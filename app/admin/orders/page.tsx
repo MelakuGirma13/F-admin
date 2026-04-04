@@ -132,12 +132,12 @@ const OrdersPage = async ({
               View and manage all customer orders across your store.
             </p>
           </div>
-          <Link href="/orders/create">
+          {/* <Link href="/orders/create">
             <Button size="sm" className="shrink-0">
               <Plus className="mr-2 h-4 w-4" />
               Create Order
             </Button>
-          </Link>
+          </Link> */}
         </header>
 
         {/* Error state */}
