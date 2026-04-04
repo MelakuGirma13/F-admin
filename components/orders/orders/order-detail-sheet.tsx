@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useTransition } from "react"
-import { toast } from "sonner"
 import {
   Sheet,
   SheetContent,
@@ -48,6 +47,7 @@ import {
   cancelOrderAction,
 } from "@/app/actions/orders/orders"
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
+import { gooeyToast } from "@/components/ui/goey-toaster"
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -412,8 +412,11 @@ export function OrderDetailSheet({
     startTransition(async () => {
       const res = await fn()
       setPendingAction(null)
-      if (res.error) toast.error(res.error)
-      else toast.success("Order updated.")
+      if (res.error)
+        gooeyToast.error("", {
+          description: res.error,
+        })
+      else gooeyToast.success("Order updated.")
     })
   }
 
@@ -599,7 +602,8 @@ export function OrderDetailSheet({
                             </Badge>
                           )}
                           <span className="text-xs whitespace-nowrap text-muted-foreground">
-                            Qty {item.qty} &times; {fmt.format(item.price)} | {item.size}
+                            Qty {item.qty} &times; {fmt.format(item.price)} |{" "}
+                            {item.size}
                           </span>
                         </div>
 
@@ -672,8 +676,6 @@ export function OrderDetailSheet({
             {/* <Section title="Shipping" icon={Truck}>
               <FulfillmentTimeline status={order.status} />
             </Section><Separator /> */}
-
-            
 
             {/* 5. Order Summary */}
             <Section title="Order Summary" icon={ReceiptText}>
