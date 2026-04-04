@@ -599,7 +599,7 @@ export function OrderDetailSheet({
                             </Badge>
                           )}
                           <span className="text-xs whitespace-nowrap text-muted-foreground">
-                            Qty {item.qty} &times; {fmt.format(item.price)}
+                            Qty {item.qty} &times; {fmt.format(item.price)} | {item.size}
                           </span>
                         </div>
 
@@ -669,11 +669,11 @@ export function OrderDetailSheet({
             <Separator />
 
             {/* 4.  Shipping */}
-            <Section title="Shipping" icon={Truck}>
+            {/* <Section title="Shipping" icon={Truck}>
               <FulfillmentTimeline status={order.status} />
-            </Section>
+            </Section><Separator /> */}
 
-            <Separator />
+            
 
             {/* 5. Order Summary */}
             <Section title="Order Summary" icon={ReceiptText}>
