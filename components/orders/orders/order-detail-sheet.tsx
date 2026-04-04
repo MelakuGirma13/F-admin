@@ -48,6 +48,7 @@ import {
 } from "@/app/actions/orders/orders"
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
 import { gooeyToast } from "@/components/ui/goey-toaster"
+import { MeasurmentDisplayDialog } from "../measurment-display-dialog"
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -605,13 +606,18 @@ export function OrderDetailSheet({
                             Qty {item.qty} &times; {fmt.format(item.price)} |{" "}
                             {item.size}
                           </span>
+                        
                         </div>
 
                         {/* Total price */}
                         <span className="shrink-0 text-sm font-semibold text-foreground tabular-nums">
                           {fmt.format(item.price * item.qty)}
                         </span>
+                        <br/>
+  <span>{item.custom_order_id && ( <MeasurmentDisplayDialog customOrderId={item.custom_order_id}/>)}</span>
+                      
                       </div>
+                      
                     </div>
                   ))}
                 </div>

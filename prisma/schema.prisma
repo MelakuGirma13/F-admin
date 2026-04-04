@@ -213,6 +213,7 @@ model OrderItem {
   id            String   @id @default(uuid())
   order_id      String
   product_id    String
+  custom_order_id String?
   quantity      Int
   price         Decimal
   product_name  String
@@ -439,7 +440,7 @@ model Setting {
 
 // Add Materialized View here
 view AverageProductRating {
-  product_id     String @unique
+  product_id     String  @unique
   average_rating Float?
   review_count   Int?
 
