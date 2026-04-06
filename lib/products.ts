@@ -374,3 +374,133 @@ export async function getProductCountByActive(isActive: boolean): Promise<number
 export async function getProductCountByFeatured(isFeatured: boolean): Promise<number> {
   return db.product.count({ where: { is_featured: isFeatured } });
 }
+
+
+export interface CreateProductInput {
+  userId: string;
+  name: string;
+  company: string;
+  description: string;
+  basePrice: number;
+  collection: "MEN" | "WOMEN";
+  isFeatured: boolean;
+  isCustom: boolean;
+  sizes: Array<{ size: string; quantity: number; priceModifier: number }>;
+  prices: Array<{
+    price: number;
+    type: string;
+    name?: string;
+    startDate?: string;
+    endDate?: string;
+    minQuantity?: number;
+  }>;
+  materials: Array<{ name: string }>;
+  categories: Array<{ name: string }>;
+  images: Array<{ url: string; isMainImage: boolean }>;
+}
+
+
+
+
+
+
+export async function createProduct(input: CreateProductInput): Promise<Product> {
+  return await db.$transaction(async (tx) => {
+    // 1. Resolve category IDs from names (existing categories only)
+    const categoryIds: string[] = [];
+    for (const cat of input.categories) {
+      const existing = await tx.productCategory.findFirst({
+        where: { name: cat.name },
+      });
+      if (!existing) {
+        throw new Error(`Category "${cat.name}" does not exist`);
+      }
+      categoryIds.push(existing.id);
+    }
+
+    // 2. Create product and connect existing categories in one go
+    const newProduct = await tx.product.create({
+      data: {
+        name: input.name,
+        company: input.company,
+        description: input.description,
+        base_price: input.basePrice,
+        collection: input.collection,
+        is_featured: input.isFeatured,
+        is_custom: input.isCustom,
+        user_id: input.userId,
+        is_active: true,
+        categories: {
+          connect: categoryIds.map((id) => ({ id })),
+        },
+      },
+    });
+
+    // 3. Sizes, prices, materials, images (unchanged)
+    if (input.sizes.length > 0) {
+      await tx.productSize.createMany({
+        data: input.sizes.map((s) => ({
+          size: s.size,
+          quantity: s.quantity,
+          price_modifier: s.priceModifier,
+          product_id: newProduct.id,
+        })),
+      });
+    }
+
+    if (input.prices.length > 0) {
+      await tx.productPrice.createMany({
+        data: input.prices.map((p) => ({
+          price: p.price,
+          type: p.type,
+          name: p.name ?? null,
+          start_date: p.startDate ? new Date(p.startDate) : null,
+          end_date: p.endDate ? new Date(p.endDate) : null,
+          min_quantity: p.minQuantity ?? null,
+          is_active: true,
+          product_id: newProduct.id,
+        })),
+      });
+    }
+
+    if (input.materials.length > 0) {
+      await tx.material.createMany({
+        data: input.materials.map((m) => ({
+          name: m.name,
+          product_id: newProduct.id,
+        })),
+      });
+    }
+
+    if (input.images.length > 0) {
+      await tx.productImage.createMany({
+        data: input.images.map((img) => ({
+          image_url: img.url,
+          is_main_image: img.isMainImage,
+          product_id: newProduct.id,
+        })),
+      });
+    }
+
+    // 4. Fetch complete product with relations
+    const completeProduct = await tx.product.findUnique({
+      where: { id: newProduct.id },
+      include: {
+        categories: true,
+        images: true,
+        prices: true,
+        sizes: true,
+        material: true,
+        favorites: true,
+        reviews: true,
+        averageRating: true,
+      },
+    });
+
+    if (!completeProduct) {
+      throw new Error("Failed to retrieve created product");
+    }
+
+    return mapPrismaToProduct(completeProduct);
+  });
+}
