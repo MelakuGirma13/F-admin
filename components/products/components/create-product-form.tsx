@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useActionState, useCallback, useState } from "react";
@@ -364,7 +365,7 @@ export function CreateProductForm() {
                 <CardContent className="space-y-3">
                   {sizes.length === 0 && (
                     <p className="text-sm text-muted-foreground text-center py-2">
-                      No sizes added. Click "Add Size" to create inventory variants.
+                      No sizes added. Click &quot;Add Size&quot; to create inventory variants.
                     </p>
                   )}
                   {sizes.map((size) => (
