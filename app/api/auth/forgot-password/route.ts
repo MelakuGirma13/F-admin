@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
-import { prisma } from "@/lib/prisma"
 import { generateToken, hashToken, createTokenExpiry } from "@/lib/token-utils"
+import db from "@/lib/db"
 
 // Schema for forgot password request
 const forgotPasswordSchema = z.object({
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     const { email } = result.data
 
     // Check if user exists
-    const user = await prisma.user.findUnique({
+    const user = await db.user.findUnique({
       where: { email },
     })
 
@@ -37,12 +37,12 @@ export async function POST(request: NextRequest) {
     const expires = createTokenExpiry(1) // Token expires in 1 hour
 
     // Delete any existing reset tokens for this user
-    await prisma.passwordReset.deleteMany({
+    await db.passwordReset.deleteMany({
       where: { email },
     })
 
     // Create a new reset token
-    await prisma.passwordReset.create({
+    await db.passwordReset.create({
       data: {
         email,
         token: hashedToken,

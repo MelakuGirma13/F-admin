@@ -1,8 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
-import { prisma } from "@/lib/prisma"
 import { auth } from "@/auth"
 import { hasPermission } from "@/lib/auth-utils"
+import db from "@/lib/db"
 
 // GET /api/settings/[key] - Get a specific setting
 export async function GET(request: NextRequest, { params }: { params: { key: string } }) {
@@ -10,7 +10,7 @@ export async function GET(request: NextRequest, { params }: { params: { key: str
     const session = await auth()
     const settingKey = params.key
 
-    const setting = await prisma.setting.findUnique({
+    const setting = await db.setting.findUnique({
       where: { key: settingKey },
     })
 
@@ -56,7 +56,7 @@ export async function PUT(request: NextRequest, { params }: { params: { key: str
       return NextResponse.json({ error: "Invalid input", details: result.error.format() }, { status: 400 })
     }
 
-    const setting = await prisma.setting.update({
+    const setting = await db.setting.update({
       where: { key: settingKey },
       data: result.data,
     })
@@ -80,7 +80,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { key: 
 
     const settingKey = params.key
 
-    await prisma.setting.delete({
+    await db.setting.delete({
       where: { key: settingKey },
     })
 

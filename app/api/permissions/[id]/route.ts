@@ -1,8 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
-import { prisma } from "@/lib/prisma"
 import { auth } from "@/auth"
 import { hasPermission } from "@/lib/auth-utils"
+import db from "@/lib/db"
 
 // Schema for updating permissions
 const updatePermissionSchema = z.object({
@@ -22,7 +22,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     const permissionId = params.id
 
     // Fetch permission with its roles
-    const permission = await prisma.permission.findUnique({
+    const permission = await db.permission.findUnique({
       where: { id: permissionId },
       include: {
         rolePermissions: {
@@ -80,7 +80,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const { description } = result.data
 
     // Check if permission exists
-    const existingPermission = await prisma.permission.findUnique({
+    const existingPermission = await db.permission.findUnique({
       where: { id: permissionId },
     })
 
@@ -89,7 +89,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     }
 
     // Update permission data
-    const updatedPermission = await prisma.permission.update({
+    const updatedPermission = await db.permission.update({
       where: { id: permissionId },
       data: {
         description,
@@ -121,7 +121,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     const permissionId = params.id
 
     // Check if permission exists
-    const existingPermission = await prisma.permission.findUnique({
+    const existingPermission = await db.permission.findUnique({
       where: { id: permissionId },
     })
 
@@ -130,7 +130,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     }
 
     // Delete permission (cascade will delete rolePermissions)
-    await prisma.permission.delete({
+    await db.permission.delete({
       where: { id: permissionId },
     })
 

@@ -36,13 +36,13 @@ const data = {
   navMain: [
     {
       title: "Dashboard",
-      url: "/admin",
+      url: "/",
       icon: SquareTerminal,
       isActive: true,
       items: [
         {
           title: "Analytics",
-          url: "/admin",
+          url: "/",
         },
         // {
         //   title: "Starred",
@@ -102,20 +102,20 @@ const data = {
       icon: Settings2,
       items: [
         {
-          title: "General",
-          url: "#",
+          title: "Permissions",
+          url: "/admin/permissions",
         },
         {
-          title: "Team",
-          url: "#",
+          title: "Roles",
+          url: "/admin/roles",
         },
         {
-          title: "Billing",
-          url: "#",
+          title: "Users",
+          url: "/admin/users",
         },
         {
-          title: "Limits",
-          url: "#",
+          title: "Settings",
+          url: "/admin/settings",
         },
       ],
     },
@@ -142,7 +142,7 @@ const data = {
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar collapsible="icon" {...props}>
-       <SidebarHeader>
+      <SidebarHeader>
         <TeamSwitcher teams={data.teams} />
       </SidebarHeader>
       <SidebarContent>

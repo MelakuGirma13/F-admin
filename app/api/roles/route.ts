@@ -1,8 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
-import { prisma } from "@/lib/prisma"
 import { auth } from "@/auth"
 import { hasPermission } from "@/lib/auth-utils"
+import db from "@/lib/db"
 
 // Schema for creating/updating roles
 const roleSchema = z.object({
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
     const skip = (page - 1) * limit
 
     // Fetch roles with their permissions
-    const roles = await prisma.role.findMany({
+    const roles = await db.role.findMany({
       skip,
       take: limit,
       where: search
@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
     })
 
     // Get total count for pagination
-    const totalRoles = await prisma.role.count({
+    const totalRoles = await db.role.count({
       where: search
         ? {
             OR: [
@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
     const { name, description, permissionIds } = result.data
 
     // Check if role already exists
-    const existingRole = await prisma.role.findUnique({
+    const existingRole = await db.role.findUnique({
       where: { name },
     })
 
@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create role
-    const role = await prisma.role.create({
+    const role = await db.role.create({
       data: {
         name,
         description,
@@ -144,7 +144,7 @@ export async function POST(request: NextRequest) {
         permissionId,
       }))
 
-      await prisma.rolePermission.createMany({
+      await db.rolePermission.createMany({
         data: permissionAssignments,
       })
     }

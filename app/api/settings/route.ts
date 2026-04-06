@@ -1,8 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
-import { prisma } from "@/lib/prisma"
 import { auth } from "@/auth"
 import { hasPermission } from "@/lib/auth-utils"
+import db from "@/lib/db"
 
 // Schema for updating settings
 const updateSettingsSchema = z.object({
@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
 
     // If requesting public settings, no authentication required
     if (publicOnly) {
-      const settings = await prisma.setting.findMany({
+      const settings = await db.setting.findMany({
         where: {
           isPublic: true,
           ...(category && { category }),
@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
     }
 
-    const settings = await prisma.setting.findMany({
+    const settings = await db.setting.findMany({
       where: category ? { category } : undefined,
       orderBy: [{ category: "asc" }, { key: "asc" }],
     })
@@ -83,7 +83,7 @@ export async function PUT(request: NextRequest) {
     // Update or create settings
     const updatedSettings = await Promise.all(
       settings.map(async (setting) => {
-        return await prisma.setting.upsert({
+        return await db.setting.upsert({
           where: { key: setting.key },
           update: {
             value: setting.value,
@@ -135,7 +135,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Invalid input", details: result.error.format() }, { status: 400 })
     }
 
-    const setting = await prisma.setting.create({
+    const setting = await db.setting.create({
       data: result.data,
     })
 

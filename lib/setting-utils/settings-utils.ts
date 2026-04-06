@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma"
+import db from "../db"
 
 
 export interface Setting {
@@ -15,7 +15,7 @@ export interface Setting {
 
 // Cache settings for better performance
 const getSettingsFromDB = async (category?: string, publicOnly = false) => {
-  return await prisma.setting.findMany({
+  return await db.setting.findMany({
     where: {
       ...(category && { category }),
       ...(publicOnly && { isPublic: true }),
@@ -29,7 +29,7 @@ const getSettingsFromDB = async (category?: string, publicOnly = false) => {
  */
 export async function getSetting(key: string, publicOnly = false): Promise<Setting | null> {
   try {
-    const setting = await prisma.setting.findUnique({
+    const setting = await db.setting.findUnique({
       where: { key },
     })
 
@@ -264,7 +264,7 @@ export async function isRegistrationAllowed(): Promise<boolean> {
 
   // Check if max users limit is reached
   if (config.maxUsers > 0) {
-    const userCount = await prisma.user.count()
+    const userCount = await db.user.count()
     if (userCount >= config.maxUsers) {
       return false
     }

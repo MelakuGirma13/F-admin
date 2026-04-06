@@ -1,9 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import bcrypt from "bcryptjs"
-import { prisma } from "@/lib/prisma"
 import { auth } from "@/auth"
 import { hasPermission } from "@/lib/auth-utils"
+import db from "@/lib/db"
 
 // Schema for updating users
 const updateUserSchema = z.object({
@@ -26,7 +26,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     const userId = params.id
 
     // Fetch user with their roles
-    const user = await prisma.user.findUnique({
+    const user = await db.user.findUnique({
       where: { id: userId },
       include: {
         userRoles: {
@@ -83,7 +83,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const { name, email, password, roleIds } = result.data
 
     // Check if user exists
-    const existingUser = await prisma.user.findUnique({
+    const existingUser = await db.user.findUnique({
       where: { id: userId },
     })
 
@@ -93,7 +93,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
     // Check if email is already taken by another user
     if (email && email !== existingUser.email) {
-      const emailTaken = await prisma.user.findUnique({
+      const emailTaken = await db.user.findUnique({
         where: { email },
       })
 
@@ -108,7 +108,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     if (email) updateData.email = email
     if (password) updateData.password = await bcrypt.hash(password, 10)
 
-    const updatedUser = await prisma.user.update({
+    const updatedUser = await db.user.update({
       where: { id: userId },
       data: updateData,
     })
@@ -116,7 +116,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     // Update roles if provided
     if (roleIds) {
       // Delete existing role assignments
-      await prisma.userRole.deleteMany({
+      await db.userRole.deleteMany({
         where: { userId },
       })
 
@@ -127,7 +127,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
           roleId,
         }))
 
-        await prisma.userRole.createMany({
+        await db.userRole.createMany({
           data: roleAssignments,
         })
       }
@@ -159,7 +159,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     const userId = params.id
 
     // Check if user exists
-    const existingUser = await prisma.user.findUnique({
+    const existingUser = await db.user.findUnique({
       where: { id: userId },
     })
 
@@ -168,7 +168,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     }
 
     // Delete user (cascade will delete userRoles)
-    await prisma.user.delete({
+    await db.user.delete({
       where: { id: userId },
     })
 

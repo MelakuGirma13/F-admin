@@ -1,7 +1,8 @@
-import { prisma } from "./prisma"
+import db from "./db"
+
 
 export async function getUserWithRolesAndPermissions(userId: string) {
-  return await prisma.user.findUnique({
+  return await db.user.findUnique({
     where: { id: userId },
     include: {
       userRoles: {

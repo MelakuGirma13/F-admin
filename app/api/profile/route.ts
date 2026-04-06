@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
-import { prisma } from "@/lib/prisma"
 import { auth } from "@/auth"
+import db from "@/lib/db"
 
 // Schema for updating profile
 const updateProfileSchema = z.object({
@@ -19,7 +19,7 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const user = await prisma.user.findUnique({
+    const user = await db.user.findUnique({
       where: { id: session.user?.id },
       select: {
         id: true,
@@ -77,7 +77,7 @@ export async function PUT(request: NextRequest) {
 
     // Check if email is already taken by another user
     if (email !== session.user?.email) {
-      const existingUser = await prisma.user.findUnique({
+      const existingUser = await db.user.findUnique({
         where: { email },
       })
 
@@ -87,7 +87,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Update user profile
-    const updatedUser = await prisma.user.update({
+    const updatedUser = await db.user.update({
       where: { id: session.user?.id },
       data: {
         name,

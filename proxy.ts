@@ -6,20 +6,28 @@ import { auth } from "./auth";
 // Define protected routes and required permissions
 const protectedRoutes = [
   {
-    path: "/dashboard",
+    path: "/",
     requiredPermission: null, // Any authenticated user can access
   },
   {
-    path: "/dashboard/users",
+    path: "/admin/users",
     requiredPermission: "users:read",
   },
   {
-    path: "/dashboard/roles",
+    path: "/admin/roles",
     requiredPermission: "roles:read",
   },
   {
-    path: "/dashboard/permissions",
+    path: "/admin/permissions",
     requiredPermission: "permissions:read",
+  },
+  {
+    path: "/admin/orders",
+    requiredPermission: "orders:read",
+  },
+  {
+    path: "/admin/products",
+    requiredPermission: "products:read",
   }
 ]
 

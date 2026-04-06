@@ -33,11 +33,11 @@ export function useUserColumns(): ColumnDef<any, any>[] {
       cell: ({ row }: any) => (
         <div className="flex items-center justify-end gap-2">
           <Button asChild variant="ghost" size="sm">
-            <Link href={`/dashboard/users/${row.original.id}`}>View</Link>
+            <Link href={`/admin/users/${row.original.id}`}>View</Link>
           </Button>
           {canEdit && (
             <Button asChild variant="ghost" size="sm">
-              <Link href={`/dashboard/users/${row.original.id}/edit`}>Edit</Link>
+              <Link href={`/admin/users/${row.original.id}/edit`}>Edit</Link>
             </Button>
           )}
         </div>

@@ -1,8 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
-import { prisma } from "@/lib/prisma"
 import { auth } from "@/auth"
 import { hasPermission } from "@/lib/auth-utils"
+import db from "@/lib/db"
 
 // Schema for creating/updating permissions
 const permissionSchema = z.object({
@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
     const skip = (page - 1) * limit
 
     // Fetch permissions with their roles count
-    const permissions = await prisma.permission.findMany({
+    const permissions = await db.permission.findMany({
       skip,
       take: limit,
       where: search
@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
     })
 
     // Get total count for pagination
-    const totalPermissions = await prisma.permission.count({
+    const totalPermissions = await db.permission.count({
       where: search
         ? {
             OR: [
@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
     const { name, description } = result.data
 
     // Check if permission already exists
-    const existingPermission = await prisma.permission.findUnique({
+    const existingPermission = await db.permission.findUnique({
       where: { name },
     })
 
@@ -125,7 +125,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create permission
-    const permission = await prisma.permission.create({
+    const permission = await db.permission.create({
       data: {
         name,
         description,

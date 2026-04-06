@@ -5,6 +5,9 @@ import { cn } from "@/lib/utils"
 import Providers from "./providers"
 
 import { Agentation } from "agentation"
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
+import { AppSidebar } from "@/components/side-bar/app-sidebar"
+import { SiteHeader } from "@/components/side-bar/site-header"
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' })
 
@@ -82,8 +85,21 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <Providers>
-          {children}
+
+          <SidebarProvider>
+            <AppSidebar />
+            <SidebarInset>
+              <SiteHeader />
+
+              <div className="flex flex-1 flex-col">
+                <div className="@container/main flex flex-1 flex-col gap-2">
+                  {children}
+                </div>
+              </div>
+            </SidebarInset>
+          </SidebarProvider>
           {process.env.NODE_ENV === "development" && <Agentation />}
+          
         </Providers>
       </body>
     </html>

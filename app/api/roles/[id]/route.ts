@@ -1,8 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
-import { prisma } from "@/lib/prisma"
 import { auth } from "@/auth"
 import { hasPermission } from "@/lib/auth-utils"
+import db from "@/lib/db"
 
 // Schema for updating roles
 const updateRoleSchema = z.object({
@@ -24,7 +24,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     const roleId = params.id
 
     // Fetch role with its permissions
-    const role = await prisma.role.findUnique({
+    const role = await db.role.findUnique({
       where: { id: roleId },
       include: {
         rolePermissions: {
@@ -88,7 +88,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const { name, description, permissionIds } = result.data
 
     // Check if role exists
-    const existingRole = await prisma.role.findUnique({
+    const existingRole = await db.role.findUnique({
       where: { id: roleId },
     })
 
@@ -98,7 +98,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
     // Check if name is already taken by another role
     if (name && name !== existingRole.name) {
-      const nameTaken = await prisma.role.findUnique({
+      const nameTaken = await db.role.findUnique({
         where: { name },
       })
 
@@ -112,7 +112,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     if (name) updateData.name = name
     if (description !== undefined) updateData.description = description
 
-    const updatedRole = await prisma.role.update({
+    const updatedRole = await db.role.update({
       where: { id: roleId },
       data: updateData,
     })
@@ -120,7 +120,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     // Update permissions if provided
     if (permissionIds) {
       // Delete existing permission assignments
-      await prisma.rolePermission.deleteMany({
+      await db.rolePermission.deleteMany({
         where: { roleId },
       })
 
@@ -131,7 +131,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
           permissionId,
         }))
 
-        await prisma.rolePermission.createMany({
+        await db.rolePermission.createMany({
           data: permissionAssignments,
         })
       }
@@ -162,7 +162,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     const roleId = params.id
 
     // Check if role exists
-    const existingRole = await prisma.role.findUnique({
+    const existingRole = await db.role.findUnique({
       where: { id: roleId },
     })
 
@@ -171,7 +171,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     }
 
     // Delete role (cascade will delete rolePermissions and userRoles)
-    await prisma.role.delete({
+    await db.role.delete({
       where: { id: roleId },
     })
 

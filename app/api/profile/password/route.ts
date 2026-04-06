@@ -1,8 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import bcrypt from "bcryptjs"
-import { prisma } from "@/lib/prisma"
 import { auth } from "@/auth"
+import db from "@/lib/db"
 
 // Schema for changing password
 const changePasswordSchema = z.object({
@@ -30,7 +30,7 @@ export async function PUT(request: NextRequest) {
     const { currentPassword, newPassword } = result.data
 
     // Get current user
-    const user = await prisma.user.findUnique({
+    const user = await db.user.findUnique({
       where: { id: session.user?.id },
     })
 
@@ -48,7 +48,7 @@ export async function PUT(request: NextRequest) {
     const hashedNewPassword = await bcrypt.hash(newPassword, 10)
 
     // Update password
-    await prisma.user.update({
+    await db.user.update({
       where: { id: session.user?.id },
       data: {
         password: hashedNewPassword,

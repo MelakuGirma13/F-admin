@@ -1,9 +1,9 @@
 'use client'
 
-import { DataTable } from '@/components/data-table'
-import { useUserColumns } from '@/components/columns/user-columns'
+import { DataTable } from '../data-table'
 import { usePermissionColumns } from './permission-columns'
 import { useRoleColumns } from './role-columns'
+import { useUserColumns } from './user-columns'
 
 type TableType = 'user' | 'permission' | 'role'
 

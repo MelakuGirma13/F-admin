@@ -1,9 +1,9 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import bcrypt from "bcryptjs"
-import { prisma } from "@/lib/prisma"
 import { auth } from "@/auth"
 import { hasPermission } from "@/lib/auth-utils"
+import db from "@/lib/db"
 
 // Schema for creating/updating users
 const userSchema = z.object({
@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
     const skip = (page - 1) * limit
 
     // Fetch users with their roles
-    const users = await prisma.user.findMany({
+    const users = await db.user.findMany({
       skip,
       take: limit,
       where: search
@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
     })
 
     // Get total count for pagination
-    const totalUsers = await prisma.user.count({
+    const totalUsers = await db.user.count({
       where: search
         ? {
             OR: [
@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
     const { name, email, password, roleIds } = result.data
 
     // Check if user already exists
-    const existingUser = await prisma.user.findUnique({
+    const existingUser = await db.user.findUnique({
       where: { email },
     })
 
@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
     const hashedPassword = await bcrypt.hash(password || Math.random().toString(36).slice(-8), 10)
 
     // Create user
-    const user = await prisma.user.create({
+    const user = await db.user.create({
       data: {
         name,
         email,
@@ -144,17 +144,17 @@ export async function POST(request: NextRequest) {
         roleId,
       }))
 
-      await prisma.userRole.createMany({
+      await db.userRole.createMany({
         data: roleAssignments,
       })
     } else {
       // Assign default role (User) if no roles provided
-      const userRole = await prisma.role.findFirst({
+      const userRole = await db.role.findFirst({
         where: { name: "User" },
       })
 
       if (userRole) {
-        await prisma.userRole.create({
+        await db.userRole.create({
           data: {
             userId: user.id,
             roleId: userRole.id,

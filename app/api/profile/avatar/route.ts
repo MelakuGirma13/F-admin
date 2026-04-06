@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
 import { auth } from "@/auth"
+import db from "@/lib/db"
 
 // POST /api/profile/avatar - Upload user avatar
 export async function POST(request: NextRequest) {
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     const avatarUrl = `/uploads/avatars/${session.user?.id}-${Date.now()}.${file.type.split("/")[1]}`
 
     // Update user's avatar URL in database
-    const updatedUser = await prisma.user.update({
+    const updatedUser = await db.user.update({
       where: { id: session.user?.id },
       data: {
         image: avatarUrl,
