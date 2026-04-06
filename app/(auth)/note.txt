@@ -1,0 +1,354 @@
+1.install packages
+2.create .env file
+    DATABASE_URL="postgresql://postgres:postgres@localhost:5432/userMgt?schema=public"
+    NODE_ENV="production"
+    JWT_SECRET=h1AW2wabKZzc24cHrJOWijfxhFjTDW8Z
+    NEXTAUTH_SECRET=your-super-secret-value
+    JWT_SECRET=your-secret-key-here
+3.create DB and run the script from prisma folder.
+    .multi@example.com  
+    P@ssw0rd   //has passowrd => $2b$10$A5bTLoITqjrLmVEVAhMtu.GYF8ZIYC8ezCjhOOfq.iF8go1ETriQq
+4.
+
+
+
+.set NODE_TLS_REJECT_UNAUTHORIZED=0   //ssl issue
+.npx prisma generate
+.npx prisma db push
+
+
+//have no profile page
+    .copy from U-M_S_14_zustand
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ //script
+
+-- Clear existing data (optional - uncomment if you want to start fresh)
+-- DELETE FROM "UserRole";
+-- DELETE FROM "RolePermission";
+-- DELETE FROM "User" WHERE email NOT LIKE '%@example.com';
+-- DELETE FROM "Role" WHERE name IN ('Admin', 'Manager', 'User', 'Guest');
+-- DELETE FROM "Permission";
+
+-- Insert Permissions
+DO $$
+DECLARE
+    permissions TEXT[][] := ARRAY[
+        -- User permissions
+        ARRAY['users:read', 'View users and their details'],
+        ARRAY['users:create', 'Create new users'],
+        ARRAY['users:update', 'Update existing users'],
+        ARRAY['users:delete', 'Delete users from the system'],
+        
+        -- Role permissions
+        ARRAY['roles:read', 'View roles and their details'],
+        ARRAY['roles:create', 'Create new roles'],
+        ARRAY['roles:update', 'Update existing roles'],
+        ARRAY['roles:delete', 'Delete roles from the system'],
+        
+        -- Permission permissions
+        ARRAY['permissions:read', 'View permissions and their details'],
+        ARRAY['permissions:create', 'Create new permissions'],
+        ARRAY['permissions:update', 'Update existing permissions'],
+        ARRAY['permissions:delete', 'Delete permissions from the system'],
+        ARRAY['permissions:assign', 'Assign permissions to roles'],
+        
+        -- Profile permissions
+        ARRAY['profile:read', 'View own profile'],
+        ARRAY['profile:update', 'Update own profile'],
+        
+        -- System permissions
+        ARRAY['system:settings', 'Manage system settings'],
+        ARRAY['system:logs', 'View system logs'],
+        ARRAY['system:backup', 'Backup and restore system data']
+    ];
+    perm TEXT[];
+BEGIN
+    FOREACH perm SLICE 1 IN ARRAY permissions
+    LOOP
+        IF NOT EXISTS (SELECT 1 FROM "Permission" WHERE name = perm[1]) THEN
+            INSERT INTO "Permission" (id, name, description, "createdAt", "updatedAt")
+            VALUES (gen_random_uuid()::text, perm[1], perm[2], CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+        END IF;
+    END LOOP;
+END $$;
+
+-- Insert Roles
+DO $$
+DECLARE
+    roles TEXT[][] := ARRAY[
+        ARRAY['Admin', 'Full system access with all permissions'],
+        ARRAY['Manager', 'Department manager with user management capabilities'],
+        ARRAY['User', 'Standard user with limited access'],
+        ARRAY['Guest', 'Minimal access for demonstration purposes']
+    ];
+    role TEXT[];
+BEGIN
+    FOREACH role SLICE 1 IN ARRAY roles
+    LOOP
+        IF NOT EXISTS (SELECT 1 FROM "Role" WHERE name = role[1]) THEN
+            INSERT INTO "Role" (id, name, description, "createdAt", "updatedAt")
+            VALUES (gen_random_uuid()::text, role[1], role[2], CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+        END IF;
+    END LOOP;
+END $$;
+
+-- Assign permissions to roles
+DO $$
+DECLARE
+    admin_role_id TEXT;
+    manager_role_id TEXT;
+    user_role_id TEXT;
+    guest_role_id TEXT;
+    perm_id TEXT;
+    admin_perms TEXT[] := ARRAY[
+        'users:read', 'users:create', 'users:update', 'users:delete',
+        'roles:read', 'roles:create', 'roles:update', 'roles:delete',
+        'permissions:read', 'permissions:create', 'permissions:update', 'permissions:delete', 'permissions:assign',
+        'profile:read', 'profile:update',
+        'system:settings', 'system:logs', 'system:backup'
+    ];
+    manager_perms TEXT[] := ARRAY[
+        'users:read', 'users:create', 'users:update',
+        'roles:read',
+        'permissions:read',
+        'profile:read', 'profile:update'
+    ];
+    user_perms TEXT[] := ARRAY[
+        'profile:read', 'profile:update'
+    ];
+    guest_perms TEXT[] := ARRAY[
+        'profile:read'
+    ];
+    perm_name TEXT;
+BEGIN
+    -- Get role IDs
+    SELECT id INTO admin_role_id FROM "Role" WHERE name = 'Admin' LIMIT 1;
+    SELECT id INTO manager_role_id FROM "Role" WHERE name = 'Manager' LIMIT 1;
+    SELECT id INTO user_role_id FROM "Role" WHERE name = 'User' LIMIT 1;
+    SELECT id INTO guest_role_id FROM "Role" WHERE name = 'Guest' LIMIT 1;
+    
+    -- Assign Admin permissions
+    FOREACH perm_name IN ARRAY admin_perms
+    LOOP
+        SELECT id INTO perm_id FROM "Permission" WHERE name = perm_name LIMIT 1;
+        IF perm_id IS NOT NULL AND NOT EXISTS (
+            SELECT 1 FROM "RolePermission" 
+            WHERE "roleId" = admin_role_id AND "permissionId" = perm_id
+        ) THEN
+            INSERT INTO "RolePermission" (id, "roleId", "permissionId", "createdAt", "updatedAt")
+            VALUES (gen_random_uuid()::text, admin_role_id, perm_id, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+        END IF;
+    END LOOP;
+    
+    -- Assign Manager permissions
+    FOREACH perm_name IN ARRAY manager_perms
+    LOOP
+        SELECT id INTO perm_id FROM "Permission" WHERE name = perm_name LIMIT 1;
+        IF perm_id IS NOT NULL AND NOT EXISTS (
+            SELECT 1 FROM "RolePermission" 
+            WHERE "roleId" = manager_role_id AND "permissionId" = perm_id
+        ) THEN
+            INSERT INTO "RolePermission" (id, "roleId", "permissionId", "createdAt", "updatedAt")
+            VALUES (gen_random_uuid()::text, manager_role_id, perm_id, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+        END IF;
+    END LOOP;
+    
+    -- Assign User permissions
+    FOREACH perm_name IN ARRAY user_perms
+    LOOP
+        SELECT id INTO perm_id FROM "Permission" WHERE name = perm_name LIMIT 1;
+        IF perm_id IS NOT NULL AND NOT EXISTS (
+            SELECT 1 FROM "RolePermission" 
+            WHERE "roleId" = user_role_id AND "permissionId" = perm_id
+        ) THEN
+            INSERT INTO "RolePermission" (id, "roleId", "permissionId", "createdAt", "updatedAt")
+            VALUES (gen_random_uuid()::text, user_role_id, perm_id, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+        END IF;
+    END LOOP;
+    
+    -- Assign Guest permissions
+    FOREACH perm_name IN ARRAY guest_perms
+    LOOP
+        SELECT id INTO perm_id FROM "Permission" WHERE name = perm_name LIMIT 1;
+        IF perm_id IS NOT NULL AND NOT EXISTS (
+            SELECT 1 FROM "RolePermission" 
+            WHERE "roleId" = guest_role_id AND "permissionId" = perm_id
+        ) THEN
+            INSERT INTO "RolePermission" (id, "roleId", "permissionId", "createdAt", "updatedAt")
+            VALUES (gen_random_uuid()::text, guest_role_id, perm_id, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+        END IF;
+    END LOOP;
+END $$;
+
+-- Create sample users with hashed passwords
+-- All passwords are set to 'password123' for testing
+DO $$
+DECLARE
+    admin_role_id TEXT;
+    manager_role_id TEXT;
+    user_role_id TEXT;
+    guest_role_id TEXT;
+    admin_id TEXT;
+    manager_id TEXT;
+    user_id TEXT;
+    guest_id TEXT;
+    -- Password: password123 (hashed with bcrypt)
+    hashed_password TEXT := '$2b$10$EpRnTzVlqHNP0.fUbXUwSOyuiXe/QLSUG6xNekdHgTGmrpHEfIoxm';
+BEGIN
+    -- Get role IDs
+    SELECT id INTO admin_role_id FROM "Role" WHERE name = 'Admin' LIMIT 1;
+    SELECT id INTO manager_role_id FROM "Role" WHERE name = 'Manager' LIMIT 1;
+    SELECT id INTO user_role_id FROM "Role" WHERE name = 'User' LIMIT 1;
+    SELECT id INTO guest_role_id FROM "Role" WHERE name = 'Guest' LIMIT 1;
+    
+    -- Create Admin user if not exists
+    IF NOT EXISTS (SELECT 1 FROM "User" WHERE email = 'admin@example.com') THEN
+        INSERT INTO "User" (id, email, password, name, "createdAt", "updatedAt")
+        VALUES (
+            gen_random_uuid()::text, 
+            'admin@example.com', 
+            hashed_password, 
+            'Admin User', 
+            CURRENT_TIMESTAMP, 
+            CURRENT_TIMESTAMP
+        )
+        RETURNING id INTO admin_id;
+        
+        -- Assign Admin role
+        INSERT INTO "UserRole" (id, "userId", "roleId", "createdAt", "updatedAt")
+        VALUES (
+            gen_random_uuid()::text, 
+            admin_id, 
+            admin_role_id, 
+            CURRENT_TIMESTAMP, 
+            CURRENT_TIMESTAMP
+        );
+    END IF;
+    
+    -- Create Manager user if not exists
+    IF NOT EXISTS (SELECT 1 FROM "User" WHERE email = 'manager@example.com') THEN
+        INSERT INTO "User" (id, email, password, name, "createdAt", "updatedAt")
+        VALUES (
+            gen_random_uuid()::text, 
+            'manager@example.com', 
+            hashed_password, 
+            'Manager User', 
+            CURRENT_TIMESTAMP, 
+            CURRENT_TIMESTAMP
+        )
+        RETURNING id INTO manager_id;
+        
+        -- Assign Manager role
+        INSERT INTO "UserRole" (id, "userId", "roleId", "createdAt", "updatedAt")
+        VALUES (
+            gen_random_uuid()::text, 
+            manager_id, 
+            manager_role_id, 
+            CURRENT_TIMESTAMP, 
+            CURRENT_TIMESTAMP
+        );
+    END IF;
+    
+    -- Create Regular user if not exists
+    IF NOT EXISTS (SELECT 1 FROM "User" WHERE email = 'user@example.com') THEN
+        INSERT INTO "User" (id, email, password, name, "createdAt", "updatedAt")
+        VALUES (
+            gen_random_uuid()::text, 
+            'user@example.com', 
+            hashed_password, 
+            'Regular User', 
+            CURRENT_TIMESTAMP, 
+            CURRENT_TIMESTAMP
+        )
+        RETURNING id INTO user_id;
+        
+        -- Assign User role
+        INSERT INTO "UserRole" (id, "userId", "roleId", "createdAt", "updatedAt")
+        VALUES (
+            gen_random_uuid()::text, 
+            user_id, 
+            user_role_id, 
+            CURRENT_TIMESTAMP, 
+            CURRENT_TIMESTAMP
+        );
+    END IF;
+    
+    -- Create Guest user if not exists
+    IF NOT EXISTS (SELECT 1 FROM "User" WHERE email = 'guest@example.com') THEN
+        INSERT INTO "User" (id, email, password, name, "createdAt", "updatedAt")
+        VALUES (
+            gen_random_uuid()::text, 
+            'guest@example.com', 
+            hashed_password, 
+            'Guest User', 
+            CURRENT_TIMESTAMP, 
+            CURRENT_TIMESTAMP
+        )
+        RETURNING id INTO guest_id;
+        
+        -- Assign Guest role
+        INSERT INTO "UserRole" (id, "userId", "roleId", "createdAt", "updatedAt")
+        VALUES (
+            gen_random_uuid()::text, 
+            guest_id, 
+            guest_role_id, 
+            CURRENT_TIMESTAMP, 
+            CURRENT_TIMESTAMP
+        );
+    END IF;
+    
+    -- Create a user with multiple roles if not exists
+    IF NOT EXISTS (SELECT 1 FROM "User" WHERE email = 'multi@example.com') THEN
+        INSERT INTO "User" (id, email, password, name, "createdAt", "updatedAt")
+        VALUES (
+            gen_random_uuid()::text, 
+            'multi@example.com', 
+            hashed_password, 
+            'Multi-Role User', 
+            CURRENT_TIMESTAMP, 
+            CURRENT_TIMESTAMP
+        )
+        RETURNING id INTO user_id;
+        
+        -- Assign Manager and User roles
+        INSERT INTO "UserRole" (id, "userId", "roleId", "createdAt", "updatedAt")
+        VALUES (
+            gen_random_uuid()::text, 
+            user_id, 
+            manager_role_id, 
+            CURRENT_TIMESTAMP, 
+            CURRENT_TIMESTAMP
+        );
+        
+        INSERT INTO "UserRole" (id, "userId", "roleId", "createdAt", "updatedAt")
+        VALUES (
+            gen_random_uuid()::text, 
+            user_id, 
+            user_role_id, 
+            CURRENT_TIMESTAMP, 
+            CURRENT_TIMESTAMP
+        );
+    END IF;
+END $$;
+
+-- Output success message
+SELECT 'Database successfully populated with RBAC data' as result;

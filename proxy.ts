@@ -1,8 +1,68 @@
 import { updateSession } from "@/lib/supabase/proxy";
 import { type NextRequest } from "next/server";
+import { NextResponse } from "next/server";
+import { auth } from "./auth";
+
+// Define protected routes and required permissions
+const protectedRoutes = [
+  {
+    path: "/dashboard",
+    requiredPermission: null, // Any authenticated user can access
+  },
+  {
+    path: "/dashboard/users",
+    requiredPermission: "users:read",
+  },
+  {
+    path: "/dashboard/roles",
+    requiredPermission: "roles:read",
+  },
+  {
+    path: "/dashboard/permissions",
+    requiredPermission: "permissions:read",
+  }
+]
 
 export async function proxy(request: NextRequest) {
-  return await updateSession(request);
+  // return await updateSession(request);
+
+// First check maintenance mode
+  // const maintenanceResponse = await checkMaintenanceMode(request);
+  // if (maintenanceResponse) {
+  //   return maintenanceResponse
+  // }
+
+  const session = await auth()
+  const path = request.nextUrl.pathname
+
+  // Check if the path is protected
+  const isProtectedRoute = protectedRoutes.some((route) => path.startsWith(route.path))
+
+  if (isProtectedRoute) {
+    // If not authenticated, redirect to login
+    if (!session) {
+      const url = new URL("/login", request.url)
+      url.searchParams.set("callbackUrl", encodeURI(request.url))
+      return NextResponse.redirect(url)
+    }
+
+    // Check for specific permission requirements
+    const routeConfig = protectedRoutes.find((route) => path.startsWith(route.path))
+    if (routeConfig?.requiredPermission) {
+      const hasRequiredPermission = session?.user?.roles?.some((role: any) =>
+        role.permissions.some((permission: any) => permission.name === routeConfig.requiredPermission),
+      )
+
+      if (!hasRequiredPermission) {
+        return NextResponse.redirect(new URL("/unauthorized", request.url))
+      }
+    }
+  }
+
+  return NextResponse.next()
+
+
+
 }
 
 export const config = {
