@@ -35,6 +35,7 @@ function mapPrismaToOrder(order: any): Order {
       (item: any): OrderItem => ({
         id: item.id,
         order_id: item.order_id,
+        custom_order_id: item.custom_order_id,
         product_id: item.product_id,
         size: item.size,
         name: item.product_name,
@@ -233,3 +234,5 @@ export async function bulkMarkPaid(
     data: { is_paid: isPaid },
   })
 }
+
+

@@ -38,6 +38,7 @@ export interface OrderItem {
   id: string;
   order_id: string;
   product_id: string;
+  custom_order_id ?: string;
   name: string;
   sku: string | null;
   qty: number;
