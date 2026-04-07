@@ -1,12 +1,13 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { prisma } from "@/lib/prisma"
+import db from "@/lib/db"
+
 import { Users, Shield, Key } from "lucide-react"
 
 export default async function DashboardPage() {
   // Fetch counts for dashboard
-  const userCount = await prisma.user.count()
-  const roleCount = await prisma.role.count()
-  const permissionCount = await prisma.permission.count()
+  const userCount = await db.user.count()
+  const roleCount = await db.role.count()
+  const permissionCount = await db.permission.count()
 
   return (
     <div className="space-y-6">

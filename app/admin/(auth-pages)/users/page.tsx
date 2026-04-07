@@ -13,7 +13,12 @@ export default async function UsersPage({
 }: {
   searchParams: { page?: string; per_page?: string; search?: string }
 }) {
-  const session = await auth()
+   const session = await auth()
+ 
+   if (!session) {
+     redirect("/login")
+   }
+ 
 
   // Check if user has permission to view users
   if (!session || !hasPermission(session.user, "users:read")) {
@@ -77,7 +82,7 @@ export default async function UsersPage({
   const canCreateUser = hasPermission(session.user, "users:create")
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-0">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Users</h1>
