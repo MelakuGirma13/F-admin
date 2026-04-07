@@ -29,21 +29,21 @@ import {
 import { updateOrderStatusAction } from "@/app/actions/orders/orders";
 
 const STATUS_OPTIONS: OrderStatus[] = [
-  "pending",
-  "placed",
-  "processing",
-  "dispatched",
-  "completed",
-  "cancelled",
+  "PENDING",
+  "ORDER_PLACED",
+  "PROCESSING",
+  "DISPATCHED",
+  "COMPLETED",
+  "CANCELLED",
 ];
 
 const STATUS_LABELS: Record<OrderStatus, string> = {
-  pending: "Pending",
-  placed: "Order Placed",
-  processing: "Processing",
-  dispatched: "Dispatched",
-  completed: "Completed",
-  cancelled: "Cancelled",
+  PENDING: "Pending",
+  ORDER_PLACED: "Order Placed",
+  PROCESSING: "Processing",
+  DISPATCHED: "Dispatched",
+  COMPLETED: "Completed",
+  CANCELLED: "Cancelled",
 };
 
 const formatCurrency = (amount: number): string =>
