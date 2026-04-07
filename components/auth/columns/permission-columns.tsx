@@ -33,11 +33,11 @@ export function usePermissionColumns(): ColumnDef<any, any>[] {
       cell: ({ row }: any) => (
         <div className="flex items-center justify-end gap-2">
           <Button asChild variant="ghost" size="sm">
-            <Link href={`/dashboard/permissions/${row.original.id}`}>View</Link>
+            <Link href={`/admin/permissions/${row.original.id}`}>View</Link>
           </Button>
           {canEdit && (
             <Button asChild variant="ghost" size="sm">
-              <Link href={`/dashboard/permissions/${row.original.id}/edit`}>Edit</Link>
+              <Link href={`/admin/permissions/${row.original.id}/edit`}>Edit</Link>
             </Button>
           )}
         </div>

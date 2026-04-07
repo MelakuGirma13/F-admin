@@ -45,7 +45,7 @@ export default async function PermissionDetailPage({ params }: { params: { id: s
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
           <Button variant="outline" size="icon" asChild>
-            <Link href="/dashboard/permissions">
+            <Link href="/admin/permissions">
               <ArrowLeft className="h-4 w-4" />
               <span className="sr-only">Back</span>
             </Link>
@@ -55,7 +55,7 @@ export default async function PermissionDetailPage({ params }: { params: { id: s
         <div className="flex space-x-2">
           {canEdit && (
             <Button asChild>
-              <Link href={`/dashboard/permissions/${permission.id}/edit`}>
+              <Link href={`/admin/permissions/${permission.id}/edit`}>
                 <Edit className="mr-2 h-4 w-4" />
                 Edit
               </Link>
@@ -102,7 +102,7 @@ export default async function PermissionDetailPage({ params }: { params: { id: s
                 {permission.rolePermissions.map((rolePermission) => (
                   <Link
                     key={rolePermission.roleId}
-                    href={`/dashboard/roles/${rolePermission.roleId}`}
+                    href={`/admin/roles/${rolePermission.roleId}`}
                     className="flex items-center space-x-3 border rounded-md p-3 hover:bg-muted transition-colors"
                   >
                     <div className="flex-shrink-0 bg-muted rounded-full p-2">

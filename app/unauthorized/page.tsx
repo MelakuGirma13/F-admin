@@ -13,7 +13,7 @@ export default function UnauthorizedPage() {
       </p>
       <div className="mt-6 flex gap-4">
         <Button asChild>
-          <Link href="/dashboard">Go to Dashboard</Link>
+          <Link href="/admin">Go to admin</Link>
         </Button>
         <Button variant="outline" asChild>
           <Link href="/">Go to Home</Link>

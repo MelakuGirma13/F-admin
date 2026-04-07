@@ -68,7 +68,7 @@ export default async function RoleDetailPage({ params }: { params: { id: string 
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
           <Button variant="outline" size="icon" asChild>
-            <Link href="/dashboard/roles">
+            <Link href="/admin/roles">
               <ArrowLeft className="h-4 w-4" />
               <span className="sr-only">Back</span>
             </Link>
@@ -78,7 +78,7 @@ export default async function RoleDetailPage({ params }: { params: { id: string 
         <div className="flex space-x-2">
           {canEdit && (
             <Button asChild>
-              <Link href={`/dashboard/roles/${role.id}/edit`}>
+              <Link href={`/admin/roles/${role.id}/edit`}>
                 <Edit className="mr-2 h-4 w-4" />
                 Edit
               </Link>
@@ -158,7 +158,7 @@ export default async function RoleDetailPage({ params }: { params: { id: string 
                 {role.userRoles.map((userRole) => (
                   <Link
                     key={userRole.userId}
-                    href={`/dashboard/users/${userRole.userId}`}
+                    href={`/admin/users/${userRole.userId}`}
                     className="flex items-center space-x-3 border rounded-md p-3 hover:bg-muted transition-colors"
                   >
                     <div className="flex-shrink-0 bg-muted rounded-full p-2">
@@ -177,7 +177,7 @@ export default async function RoleDetailPage({ params }: { params: { id: string 
             {role._count.userRoles > 10 && (
               <div className="mt-4 text-center">
                 <Button variant="outline" asChild>
-                  <Link href={`/dashboard/users?role=${role.id}`}>View All Users</Link>
+                  <Link href={`/admin/users?role=${role.id}`}>View All Users</Link>
                 </Button>
               </div>
             )}

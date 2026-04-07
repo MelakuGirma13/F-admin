@@ -85,7 +85,7 @@ export default async function UsersPage({
         </div>
         {canCreateUser && (
           <Button asChild>
-            <Link href="/dashboard/users/new">
+            <Link href="/admin/users/new">
               <PlusCircle className="mr-2 h-4 w-4" />
               Add User
             </Link>

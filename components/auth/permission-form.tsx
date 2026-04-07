@@ -73,7 +73,7 @@ export function PermissionForm({ permission, onSuccess }: PermissionFormProps) {
       if (onSuccess) {
         onSuccess()
       } else {
-        router.push("/dashboard/permissions")
+        router.push("/admin/permissions")
         router.refresh()
       }
     } catch (error) {

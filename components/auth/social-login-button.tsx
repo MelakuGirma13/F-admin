@@ -20,7 +20,7 @@ export function SocialLoginButton({ provider, icon, label, className }: SocialLo
   const handleSignIn = async () => {
     try {
       setIsLoading(true)
-      await signIn(provider, { callbackUrl: "/dashboard" })
+      await signIn(provider, { callbackUrl: "/admin" })
     } catch (error) {
       console.error(`Error signing in with ${provider}:`, error)
     }

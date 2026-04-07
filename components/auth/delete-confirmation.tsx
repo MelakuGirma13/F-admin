@@ -48,7 +48,7 @@ export function DeleteConfirmation({ id, name, type, onSuccess }: DeleteConfirma
       if (onSuccess) {
         onSuccess()
       } else {
-        router.push(`/dashboard/${type}s`)
+        router.push(`/admin/${type}s`)
         router.refresh()
       }
     } catch (error) {

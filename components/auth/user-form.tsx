@@ -85,7 +85,7 @@ export function UserForm({ user, roles, onSuccess }: UserFormProps) {
       if (onSuccess) {
         onSuccess()
       } else {
-        router.push("/dashboard/users")
+        router.push("/admin/users")
         router.refresh()
       }
     } catch (error) {

@@ -5,10 +5,10 @@ import { auth } from "./auth";
 
 // Define protected routes and required permissions
 const protectedRoutes = [
-  {
-    path: "/",
-    requiredPermission: null, // Any authenticated user can access
-  },
+  // {
+  //   path: "/admin",
+  //   requiredPermission: null, // Any authenticated user can access
+  // },
   {
     path: "/admin/users",
     requiredPermission: "users:read",
@@ -67,10 +67,7 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  return NextResponse.next()
-
-
-
+  return NextResponse.next();
 }
 
 export const config = {

@@ -94,7 +94,7 @@ export function RoleForm({ role, permissions, onSuccess }: RoleFormProps) {
       if (onSuccess) {
         onSuccess()
       } else {
-        router.push("/dashboard/roles")
+        router.push("/admin/roles")
         router.refresh()
       }
     } catch (error) {

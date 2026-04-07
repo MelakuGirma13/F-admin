@@ -9,20 +9,20 @@ const maintenanceExemptExactPaths = [
     "/api/auth",
     "/login",
     "/register",
-    "/dashboard",
+    "/admin",
   ]
-  // Paths that allow deeper subpaths (e.g., _next/static, /dashboard/settings/edit)
+  // Paths that allow deeper subpaths (e.g., _next/static, /admin/settings/edit)
   const maintenanceExemptPrefixPaths = [
     "/_next",
-    "/dashboard/settings",
+    "/admin/settings",
   ]
   
   // Paths that should redirect to /maintenance during active maintenance
   const maintenanceProtectedPaths = [
-    "/dashboard/users",
-    "/dashboard/roles",
-    "/dashboard/permissions",
-    "/dashboard/profile",
+    "/admin/users",
+    "/admin/roles",
+    "/admin/permissions",
+    "/admin/profile",
   ]
   
   export async function checkMaintenanceMode(request: NextRequest) {

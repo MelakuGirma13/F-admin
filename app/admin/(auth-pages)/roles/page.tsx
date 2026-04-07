@@ -86,7 +86,7 @@ export default async function RolesPage({
         </div>
         {canCreateRole && (
           <Button asChild>
-            <Link href="/dashboard/roles/new">
+            <Link href="/admin/roles/new">
               <PlusCircle className="mr-2 h-4 w-4" />
               Add Role
             </Link>
