@@ -19,7 +19,7 @@ import { OrderStatusBadge } from "../orders/order-status-badge";
 // Shared type used by sub-components — exported so they can import it
 export interface EditLineItem {
   key: string;       // stable React key — DB id (stringified) for existing, uuid for new
-  id: number | null; // DB id for existing items; null for new
+  id: string | null; // DB id for existing items; null for new
   variantId: string | null;
   name: string;
   sku: string | null;
