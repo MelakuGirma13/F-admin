@@ -3,11 +3,12 @@ import db from "@/lib/db";
 
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string } >}
 ) {
+  const {id:id} = await params;
   try {
     const customOrder = await db.customOrder.findFirst({
-      where: { id: params.id },
+      where: { id: id },
       include: { measurements: true },
       orderBy: { created_at: "desc" },
     });
