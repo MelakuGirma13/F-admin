@@ -5,10 +5,10 @@ import { hasPermission } from "@/lib/auth-utils"
 import db from "@/lib/db"
 
 // GET /api/settings/[key] - Get a specific setting
-export async function GET(request: NextRequest, { params }: { params: { key: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ key: string }>}) {
   try {
     const session = await auth()
-    const settingKey = params.key
+    const {key:settingKey} = await params
 
     const setting = await db.setting.findUnique({
       where: { key: settingKey },
@@ -33,7 +33,7 @@ export async function GET(request: NextRequest, { params }: { params: { key: str
 }
 
 // PUT /api/settings/[key] - Update a specific setting
-export async function PUT(request: NextRequest, { params }: { params: { key: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ key: string }> }) {
   try {
     const session = await auth()
 
@@ -42,7 +42,7 @@ export async function PUT(request: NextRequest, { params }: { params: { key: str
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
     }
 
-    const settingKey = params.key
+    const {key:settingKey} = await params;
     const body = await request.json()
 
     const updateSchema = z.object({
@@ -69,7 +69,7 @@ export async function PUT(request: NextRequest, { params }: { params: { key: str
 }
 
 // DELETE /api/settings/[key] - Delete a specific setting
-export async function DELETE(request: NextRequest, { params }: { params: { key: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ key: string }> }) {
   try {
     const session = await auth()
 
@@ -78,7 +78,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { key: 
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
     }
 
-    const settingKey = params.key
+    const {key:settingKey} = await params
 
     await db.setting.delete({
       where: { key: settingKey },

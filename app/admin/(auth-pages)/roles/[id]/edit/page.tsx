@@ -4,7 +4,7 @@ import { hasPermission } from "@/lib/auth-utils"
 import db from "@/lib/db"
 import { notFound, redirect } from "next/navigation"
 
-export default async function EditRolePage({ params }: { params: { id: string } }) {
+export default async function EditRolePage({ params }: { params: Promise<{ id: string } >}) {
   const session = await auth()
 
   // Check if user has permission to update roles
@@ -12,7 +12,7 @@ export default async function EditRolePage({ params }: { params: { id: string } 
     redirect("/unauthorized")
   }
 
-  const roleId = params.id
+const { id: roleId } = await params
 
   // Fetch role with its permissions
   const role = await db.role.findUnique({

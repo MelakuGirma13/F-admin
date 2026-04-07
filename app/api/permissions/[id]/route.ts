@@ -10,7 +10,7 @@ const updatePermissionSchema = z.object({
 })
 
 // GET /api/permissions/[id] - Get a specific permission
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise< { id: string }> }) {
   try {
     const session = await auth()
 
@@ -19,7 +19,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
     }
 
-    const permissionId = params.id
+    const {id:permissionId} = await params
 
     // Fetch permission with its roles
     const permission = await db.permission.findUnique({
@@ -59,7 +59,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 }
 
 // PUT /api/permissions/[id] - Update a permission
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: Promise< { id: string }> }) {
   try {
     const session = await auth()
 
@@ -68,7 +68,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
     }
 
-    const permissionId = params.id
+    const {id:permissionId} = await params
     const body = await request.json()
 
     // Validate input

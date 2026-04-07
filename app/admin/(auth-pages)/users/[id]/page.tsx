@@ -10,7 +10,7 @@ import { ArrowLeft, Edit } from "lucide-react"
 import { DeleteConfirmation } from "@/components/auth/delete-confirmation"
 import db from "@/lib/db"
 
-export default async function UserDetailPage({ params }: { params: { id: string } }) {
+export default async function UserDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
 
   // Check if user has permission to view users
@@ -18,7 +18,7 @@ export default async function UserDetailPage({ params }: { params: { id: string 
     redirect("/unauthorized")
   }
 
-  const userId = params.id
+  const {id:userId} = await params
 
   // Fetch user with their roles
   const user = await db.user.findUnique({

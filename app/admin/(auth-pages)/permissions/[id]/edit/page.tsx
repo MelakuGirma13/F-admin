@@ -5,7 +5,7 @@ import { notFound, redirect } from "next/navigation"
 import db from "@/lib/db"
 import { PermissionForm } from "@/components/auth/permission-form"
 
-export default async function EditPermissionPage({ params }: { params: { id: string } }) {
+export default async function EditPermissionPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
 
   // Check if user has permission to update permissions
@@ -13,7 +13,7 @@ export default async function EditPermissionPage({ params }: { params: { id: str
     redirect("/unauthorized")
   }
 
-  const permissionId = params.id
+  const {id: permissionId }= await params
 
   // Fetch permission
   const permission = await db.permission.findUnique({

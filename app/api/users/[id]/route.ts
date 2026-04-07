@@ -14,7 +14,7 @@ const updateUserSchema = z.object({
 })
 
 // GET /api/users/[id] - Get a specific user
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string } >}) {
   try {
     const session = await auth()
 
@@ -23,7 +23,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
     }
 
-    const userId = params.id
+    const {id:userId} = await params
 
     // Fetch user with their roles
     const user = await db.user.findUnique({
@@ -62,7 +62,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 }
 
 // PUT /api/users/[id] - Update a user
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const session = await auth()
 
@@ -71,7 +71,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
     }
 
-    const userId = params.id
+    const {id:userId} = await params
     const body = await request.json()
 
     // Validate input
@@ -147,7 +147,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 }
 
 // DELETE /api/users/[id] - Delete a user
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }>}) {
   try {
     const session = await auth()
 
@@ -156,7 +156,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
     }
 
-    const userId = params.id
+    const {id:userId} = await params
 
     // Check if user exists
     const existingUser = await db.user.findUnique({

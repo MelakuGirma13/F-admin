@@ -12,7 +12,7 @@ const updateRoleSchema = z.object({
 })
 
 // GET /api/roles/[id] - Get a specific role
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise< { id: string }> }) {
   try {
     const session = await auth()
 
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
     }
 
-    const roleId = params.id
+    const {id:roleId }= await params
 
     // Fetch role with its permissions
     const role = await db.role.findUnique({
@@ -67,7 +67,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 }
 
 // PUT /api/roles/[id] - Update a role
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: Promise< { id: string } >}) {
   try {
     const session = await auth()
 
@@ -76,7 +76,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
     }
 
-    const roleId = params.id
+    const {id:roleId} = await params;
     const body = await request.json()
 
     // Validate input
@@ -150,7 +150,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 }
 
 // DELETE /api/roles/[id] - Delete a role
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise< { id: string } >}) {
   try {
     const session = await auth()
 
@@ -159,7 +159,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
     }
 
-    const roleId = params.id
+    const {id:roleId} = await params
 
     // Check if role exists
     const existingRole = await db.role.findUnique({
