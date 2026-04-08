@@ -1,15 +1,3 @@
-// import React from 'react'
-
-// function page() {
-//   return (
-//     <div>page</div>
-//   )
-// }
-
-// export default page
-
-
-
 
 import type { Metadata } from "next";
 import { Suspense } from "react";
@@ -142,7 +130,7 @@ const ProductsPage = async ({ searchParams }: ProductsPageProps): Promise<React.
               Manage your product catalog, inventory, and pricing.
             </p>
           </div>
-          <Link href="/products/create">
+          <Link href="/admin/products/create">
             <Button size="sm" className="shrink-0">
               <Plus className="mr-2 h-4 w-4" />
               Add Product
