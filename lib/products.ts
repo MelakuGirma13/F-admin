@@ -35,11 +35,7 @@ function mapPrismaToProduct(prismaProduct: any): Product {
     is_custom: prismaProduct.is_custom,
     
     // Relations (optional, depending on include)
-    categories: prismaProduct.categories?.map((pc: any) => ({
-      id: pc.category.id,
-      name: pc.category.name,
-      description: pc.category.description,
-    })) || prismaProduct.categories?.map((cat: any) => ({
+    categories: prismaProduct.categories?.map((cat: any) => ({
       id: cat.id,
       name: cat.name,
       description: cat.description,
