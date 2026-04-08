@@ -146,7 +146,7 @@ export function ProfileForm({ user }: ProfileFormProps) {
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <CardContent className="space-y-6">
             {/* Avatar Upload */}
-            <div className="flex items-center space-x-4">
+            {/* <div className="flex items-center space-x-4">
               <Avatar className="h-20 w-20">
                 <AvatarImage src={avatarPreview || "/placeholder-user.jpg"} alt={user.name || "User"} />
                 <AvatarFallback className="text-lg">
@@ -171,7 +171,7 @@ export function ProfileForm({ user }: ProfileFormProps) {
                 />
                 <p className="text-xs text-muted-foreground mt-1">JPG, PNG or GIF. Max size 5MB.</p>
               </div>
-            </div>
+            </div> */}
 
             <FormField
               control={form.control}

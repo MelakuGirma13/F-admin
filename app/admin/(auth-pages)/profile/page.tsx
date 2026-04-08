@@ -116,10 +116,10 @@ export default async function ProfilePage() {
                 <Key className="h-4 w-4" />
                 Permissions
               </TabsTrigger>
-              <TabsTrigger value="preferences" className="flex items-center gap-2">
+              {/* <TabsTrigger value="preferences" className="flex items-center gap-2">
                 <Settings className="h-4 w-4" />
                 Preferences
-              </TabsTrigger>
+              </TabsTrigger> */}
             </TabsList>
 
             <TabsContent value="general">

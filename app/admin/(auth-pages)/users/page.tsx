@@ -11,7 +11,7 @@ import TableWrapper from "@/components/auth/columns/TableWrapper"
 export default async function UsersPage({
   searchParams,
 }: {
-  searchParams: { page?: string; per_page?: string; search?: string }
+  searchParams: Promise<{ page?: string; per_page?: string; search?: string }>
 }) {
    const session = await auth()
  
@@ -25,9 +25,12 @@ export default async function UsersPage({
     redirect("/unauthorized")
   }
 
-  const page = Number(searchParams.page) || 1
-  const pageSize = Number(searchParams.per_page) || 10
-  const search = searchParams.search || ""
+ const params = await searchParams
+
+  const page = Number(params.page) || 1
+  const pageSize = Number(params.per_page) || 10
+  const search = params.search || ""
+
 
   // Calculate pagination
   const skip = (page - 1) * pageSize

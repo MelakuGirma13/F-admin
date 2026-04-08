@@ -123,7 +123,7 @@ const data = {
   projects: [
     {
       name: "Store-front",
-      url: "#",
+      url: "https://fafreshfashion.com/",
       icon: Frame,
     },
     // {

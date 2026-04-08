@@ -1,11 +1,12 @@
 "use client"
 
-import { ChevronsUpDown, Sparkles, BadgeCheck, CreditCard, Bell, LogOut } from "lucide-react"
+import { ChevronsUpDown, Sparkles, BadgeCheck, CreditCard, Bell, LogOut, User } from "lucide-react"
 
 import { AvatarImage, AvatarFallback, Avatar } from "../ui/avatar"
 import { DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuGroup, DropdownMenuItem, DropdownMenu } from "../ui/dropdown-menu"
 import { useSidebar, SidebarMenu, SidebarMenuItem, SidebarMenuButton } from "../ui/sidebar"
 import { signOut } from "next-auth/react"
+import Link from "next/link"
 
 export function NavUser({
   user,
@@ -57,8 +58,14 @@ export function NavUser({
               </div>
             </DropdownMenuLabel>
 
+            <DropdownMenuItem className="cursor-pointer">
+              <User />
+              <Link href="/admin/profile">
+                Profile</Link>
+            </DropdownMenuItem>
+
             <DropdownMenuItem
-            className="cursor-pointer"
+              className="cursor-pointer"
               onSelect={(event) => {
                 event.preventDefault()
                 signOut({ callbackUrl: "/login" })
