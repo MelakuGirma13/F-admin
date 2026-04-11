@@ -501,3 +501,36 @@ export async function createProduct(input: CreateProductInput): Promise<Product>
     return mapPrismaToProduct(completeProduct);
   });
 }
+
+
+
+
+
+export interface CreateProductCategoryInput {
+  name: string;
+  description?: string;
+}
+export async function createProductCategory(
+  input: CreateProductCategoryInput
+): Promise<ProductCategory> {
+  // Check for existing category with the same name (case-insensitive? adjust as needed)
+  const existing = await db.productCategory.findFirst({
+    where: {
+      name: {
+        equals: input.name,
+        mode: "insensitive", // optional: prevent duplicate names regardless of case
+      },
+    },
+  });
+
+  if (existing) {
+    throw new Error(`Category "${input.name}" already exists.`);
+  }
+
+  return await db.productCategory.create({
+    data: {
+      name: input.name,
+      description: input.description ?? "", // ensure description is never null (schema requires String, not optional)
+    },
+  });
+}

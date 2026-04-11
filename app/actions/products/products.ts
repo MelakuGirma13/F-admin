@@ -11,7 +11,7 @@ import {
   deleteProduct,
   bulkUpdateActive,
   bulkUpdateFeatured,
-  bulkDeleteProducts,createProduct, CreateProductInput,
+  bulkDeleteProducts,createProduct, CreateProductInput,createProductCategory
 } from "@/lib/products";
 
 import { redirect } from "next/navigation";
@@ -247,4 +247,111 @@ export async function toggleProductActiveAction(
   isActive: boolean
 ): Promise<{ error?: string }> {
   return updateProductActiveStatusAction(productId, isActive);
+}
+
+
+
+
+
+
+
+//import { createClient } from "@/utils/supabase/server"; // your Supabase server client
+
+export async function uploadImageToSupabase(file: File): Promise<string> {
+  const supabase = await createClient();
+
+  // Generate a unique filename
+  const fileExt = file.name.split(".").pop();
+  const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
+  const filePath = `public/${fileName}`;
+
+  // Convert File to ArrayBuffer/Blob for server upload
+  const arrayBuffer = await file.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+
+  const { data, error } = await supabase.storage
+    .from("images") // your bucket name
+    .upload(filePath, buffer, {
+      contentType: file.type,
+      cacheControl: "3600",
+      upsert: false,
+    });
+
+  if (error) {
+    throw new Error(`Upload failed: ${error.message}`);
+  }
+
+  // // Get public URL
+  // const { data: publicUrlData } = supabase.storage
+  //   .from("product-images")
+  //   .getPublicUrl(data.path);
+
+  return data.path;
+}
+
+
+
+
+
+
+// Zod validation schema
+const createCategorySchema = z.object({
+  name: z.string().min(1, "Category name is required").max(255),
+  description: z.string().optional(),
+});
+
+
+export async function createCategoryAction(input: {
+  name: string;
+  description?: string;
+}) {
+  // 1. Authenticate user
+  const supabase = await createClient();
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    return {
+      success: false,
+      error: "Unauthorized. Please log in.",
+    };
+  }
+
+  // Optional: Check for admin role if needed
+  // const { data: roleData } = await supabase.from('user_roles').select('role_id').eq('user_id', user.id);
+  // if (!roleData?.some(r => r.role_id === 'admin')) {
+  //   return { success: false, error: "Admin access required." };
+  // }
+
+  // 2. Validate input
+  const validation = createCategorySchema.safeParse(input);
+  if (!validation.success) {
+    return {
+      status: "error",
+      message: "Validation failed. Please check the form.",
+      fieldErrors: validation.error.flatten().fieldErrors as Record<string, string[]>,
+    };
+  }
+
+  // 3. Create category via service
+  try {
+    const category = await createProductCategory({
+      name: validation.data.name,
+      description: validation.data.description,
+    });
+
+    // // Revalidate any pages that list categories (e.g., the product form, categories page)
+    // revalidatePath("/products");
+    // revalidatePath("/api/categories"); // if you have an API endpoint
+
+    return {
+      success: true,
+      data: category,
+    };
+  } catch (error) {
+    console.error("Category creation error:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to create category.",
+    };
+  }
 }
