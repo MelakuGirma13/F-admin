@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 
 
 
@@ -734,6 +735,7 @@ export function CreateProductForm() {
   const fetchCategories = useCallback(async () => {
     try {
       const res = await fetch("/api/categories");
+      console.log("categoriess",res);
       if (res.ok) {
         const data = await res.json();
         setExistingCategories(data);
@@ -743,9 +745,9 @@ export function CreateProductForm() {
     }
   }, []);
 
-  // useEffect(() => {
-  //   fetchCategories();
-  // }, [fetchCategories]);
+  useEffect(() => {
+    fetchCategories();
+  }, []);
 
   // --------------------------------------------------------------------
   // Category handlers
