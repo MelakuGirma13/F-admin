@@ -1,11 +1,16 @@
+
+
+
+
+
+
+
+
+
+
+
 /* eslint-disable react/no-unescaped-entities */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-
-
-
-
-
-
 
 "use client";
 
@@ -46,7 +51,7 @@ import {
 } from "@/app/actions/products/products";
 
 // ----------------------------------------------------------------------
-// Types for draft state
+// Types
 interface DraftSize {
   id: string;
   size: string;
@@ -70,16 +75,16 @@ interface DraftMaterial {
 }
 
 interface DraftCategory {
-  id: string; // existing category id (if selected) or temp id for new
-  name: string; // display name
-  isExisting: boolean; // true if fetched from DB, false if newly typed
+  id: string;
+  name: string;
+  isExisting: boolean;
 }
 
 interface DraftImage {
   id: string;
   url: string;
   isMain: boolean;
-  file?: File; // optional file for upload
+  file?: File;
 }
 
 // ----------------------------------------------------------------------
@@ -105,6 +110,413 @@ const MATERIAL_SUGGESTIONS = [
   "Linen",
   "Leather",
 ];
+
+// ----------------------------------------------------------------------
+// Standalone ProductSizes Component
+interface ProductSizesProps {
+  defaultSizes?: DraftSize[];
+  onChange?: (sizes: DraftSize[]) => void;
+  title?: string;
+  disabled?: boolean;
+}
+
+const ProductSizes: React.FC<ProductSizesProps> = ({
+  defaultSizes = [],
+  onChange,
+  title = "Sizes & Inventory",
+  disabled = false,
+}) => {
+  const [sizes, setSizes] = useState<DraftSize[]>(defaultSizes);
+
+  const tempId = () => Math.random().toString(36).substring(2, 9);
+
+  const addSize = () => {
+    const newSize = { id: tempId(), size: "", quantity: 0, priceModifier: 0 };
+    setSizes((prev) => [...prev, newSize]);
+  };
+
+  const updateSize = (
+    id: string,
+    field: keyof DraftSize,
+    value: string | number
+  ) => {
+    setSizes((prev) =>
+      prev.map((s) =>
+        s.id === id
+          ? { ...s, [field]: field === "size" ? String(value) : Number(value) }
+          : s
+      )
+    );
+  };
+
+  const removeSize = (id: string) => {
+    setSizes((prev) => prev.filter((s) => s.id !== id));
+  };
+
+ 
+  useEffect(() => {
+    onChange?.(sizes);
+  }, [sizes]);
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle className="text-base">{title}</CardTitle>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={addSize}
+          disabled={disabled}
+        >
+          <Plus className="h-3.5 w-3.5 mr-1" /> Add Size
+        </Button>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {sizes.length === 0 && (
+          <p className="text-sm text-muted-foreground text-center py-2">
+            No sizes added. Click "Add Size" to create inventory variants.
+          </p>
+        )}
+        {sizes.map((size) => (
+          <div
+            key={size.id}
+            className="flex flex-wrap items-end gap-3 p-3 border rounded-md"
+          >
+            <div className="flex-1 min-w-[120px]">
+              <Label className="text-xs">Size Name</Label>
+              <Input
+                list="size-suggestions"
+                value={size.size}
+                onChange={(e) => updateSize(size.id, "size", e.target.value)}
+                placeholder="e.g., S, M, L"
+                disabled={disabled}
+              />
+            </div>
+            <div className="w-28">
+              <Label className="text-xs">Quantity</Label>
+              <Input
+                type="number"
+                value={size.quantity}
+                onChange={(e) =>
+                  updateSize(size.id, "quantity", parseInt(e.target.value) || 0)
+                }
+                min={0}
+                disabled={disabled}
+              />
+            </div>
+            <div className="w-32">
+              <Label className="text-xs">Price Modifier ($)</Label>
+              <Input
+                type="number"
+                value={size.priceModifier}
+                onChange={(e) =>
+                  updateSize(
+                    size.id,
+                    "priceModifier",
+                    parseInt(e.target.value) || 0
+                  )
+                }
+                disabled={disabled}
+              />
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => removeSize(size.id)}
+              disabled={disabled}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        ))}
+        <datalist id="size-suggestions">
+          {SIZE_SUGGESTIONS.map((s) => (
+            <option key={s} value={s} />
+          ))}
+        </datalist>
+      </CardContent>
+    </Card>
+  );
+};
+
+// ----------------------------------------------------------------------
+// Standalone ProductPrices Component
+interface ProductPricesProps {
+  defaultPrices?: DraftPrice[];
+  onChange?: (prices: DraftPrice[]) => void;
+  title?: string;
+  disabled?: boolean;
+}
+
+const ProductPrices: React.FC<ProductPricesProps> = ({
+  defaultPrices = [],
+  onChange,
+  title = "Additional Pricing Rules",
+  disabled = false,
+}) => {
+  const [prices, setPrices] = useState<DraftPrice[]>(defaultPrices);
+
+  const tempId = () => Math.random().toString(36).substring(2, 9);
+
+  const addPrice = () => {
+    const newPrice: DraftPrice = {
+      id: tempId(),
+      price: 0,
+      type: "STANDARD",
+      name: "",
+    };
+    setPrices((prev) => [...prev, newPrice]);
+  };
+
+  const updatePrice = (
+    id: string,
+    field: keyof DraftPrice,
+    value: string | number | undefined
+  ) => {
+    setPrices((prev) =>
+      prev.map((p) =>
+        p.id === id
+          ? {
+              ...p,
+              [field]:
+                field === "price" || field === "minQuantity"
+                  ? Number(value)
+                  : value,
+            }
+          : p
+      )
+    );
+  };
+
+  const removePrice = (id: string) => {
+    setPrices((prev) => prev.filter((p) => p.id !== id));
+  };
+
+  // Notify parent when prices change
+  useEffect(() => {
+    onChange?.(prices);
+  }, [prices]);
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle className="text-base">{title}</CardTitle>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={addPrice}
+          disabled={disabled}
+        >
+          <Plus className="h-3.5 w-3.5 mr-1" /> Add Price
+        </Button>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {prices.length === 0 && (
+          <p className="text-sm text-muted-foreground text-center py-2">
+            Optional: Add sale, wholesale, or seasonal prices.
+          </p>
+        )}
+        {prices.map((price) => (
+          <div key={price.id} className="p-3 border rounded-md space-y-2">
+            <div className="flex flex-wrap gap-3">
+              <div className="flex-1">
+                <Label className="text-xs">Price Type</Label>
+                <Select
+                  value={price.type}
+                  onValueChange={(v) => updatePrice(price.id, "type", v)}
+                  disabled={disabled}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PRICE_TYPES.map((pt) => (
+                      <SelectItem key={pt.value} value={pt.value}>
+                        {pt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="w-32">
+                <Label className="text-xs">Amount ($)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={price.price}
+                  onChange={(e) =>
+                    updatePrice(
+                      price.id,
+                      "price",
+                      parseFloat(e.target.value) || 0
+                    )
+                  }
+                  disabled={disabled}
+                />
+              </div>
+              <div className="w-32">
+                <Label className="text-xs">Min Quantity</Label>
+                <Input
+                  type="number"
+                  value={price.minQuantity || ""}
+                  onChange={(e) =>
+                    updatePrice(
+                      price.id,
+                      "minQuantity",
+                      e.target.value ? parseInt(e.target.value) : undefined
+                    )
+                  }
+                  disabled={disabled}
+                />
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => removePrice(price.id)}
+                disabled={disabled}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <Label className="text-xs">Price Name (optional)</Label>
+                <Input
+                  value={price.name || ""}
+                  onChange={(e) => updatePrice(price.id, "name", e.target.value)}
+                  placeholder="e.g., Summer Sale"
+                  disabled={disabled}
+                />
+              </div>
+              <div className="flex-1">
+                <Label className="text-xs">Start Date</Label>
+                <Input
+                  type="date"
+                  value={price.startDate || ""}
+                  onChange={(e) =>
+                    updatePrice(price.id, "startDate", e.target.value)
+                  }
+                  disabled={disabled}
+                />
+              </div>
+              <div className="flex-1">
+                <Label className="text-xs">End Date</Label>
+                <Input
+                  type="date"
+                  value={price.endDate || ""}
+                  onChange={(e) =>
+                    updatePrice(price.id, "endDate", e.target.value)
+                  }
+                  disabled={disabled}
+                />
+              </div>
+            </div>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+};
+
+// ----------------------------------------------------------------------
+// Standalone ProductMaterials Component
+interface ProductMaterialsProps {
+  defaultMaterials?: DraftMaterial[];
+  onChange?: (materials: DraftMaterial[]) => void;
+  title?: string;
+  disabled?: boolean;
+}
+
+const ProductMaterials: React.FC<ProductMaterialsProps> = ({
+  defaultMaterials = [],
+  onChange,
+  title = "Materials",
+  disabled = false,
+}) => {
+  const [materials, setMaterials] = useState<DraftMaterial[]>(defaultMaterials);
+
+  const tempId = () => Math.random().toString(36).substring(2, 9);
+
+  const addMaterial = () => {
+    const newMaterial = { id: tempId(), name: "" };
+    setMaterials((prev) => [...prev, newMaterial]);
+  };
+
+  const updateMaterial = (id: string, name: string) => {
+    setMaterials((prev) =>
+      prev.map((m) => (m.id === id ? { ...m, name } : m))
+    );
+  };
+
+  const removeMaterial = (id: string) => {
+    setMaterials((prev) => prev.filter((m) => m.id !== id));
+  };
+
+  // Notify parent when materials change
+  useEffect(() => {
+    onChange?.(materials);
+  }, [materials, onChange]);
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle className="text-base">{title}</CardTitle>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={addMaterial}
+          disabled={disabled}
+        >
+          <Plus className="h-3.5 w-3.5 mr-1" /> Add Material
+        </Button>
+      </CardHeader>
+      <CardContent>
+        <div className="flex flex-wrap gap-2">
+          {materials.map((material) => (
+            <div
+              key={material.id}
+              className="flex items-center gap-1 border rounded-md px-2 py-1"
+            >
+              <Input
+                list="material-suggestions"
+                value={material.name}
+                onChange={(e) => updateMaterial(material.id, e.target.value)}
+                placeholder="e.g., Cotton"
+                className="border-0 h-7 w-40 focus:ring-0 p-1"
+                disabled={disabled}
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                onClick={() => removeMaterial(material.id)}
+                disabled={disabled}
+              >
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            </div>
+          ))}
+          {materials.length === 0 && (
+            <span className="text-sm text-muted-foreground">
+              No materials added.
+            </span>
+          )}
+        </div>
+        <datalist id="material-suggestions">
+          {MATERIAL_SUGGESTIONS.map((m) => (
+            <option key={m} value={m} />
+          ))}
+        </datalist>
+      </CardContent>
+    </Card>
+  );
+};
 
 // ----------------------------------------------------------------------
 // Shadcn/ui styled UploadImage Component
@@ -166,7 +578,6 @@ export const UploadImage: React.FC<UploadImageProps> = ({
       console.error("Error uploading image:", error);
     } finally {
       setIsUploading(false);
-      // Reset input
       e.target.value = "";
     }
   };
@@ -189,16 +600,15 @@ export const UploadImage: React.FC<UploadImageProps> = ({
     );
   };
 
-  // useEffect(() => {
-  //   onChange?.(images);
-  // }, [images, onChange]);
+  useEffect(() => {
+    onChange?.(images);
+  }, [images, ]);
 
   return (
     <div className="space-y-4">
       {title && <h3 className="text-base font-medium">{title}</h3>}
 
       <div className="flex flex-wrap gap-3">
-        {/* Upload Button */}
         {(!maxImages || images.length < maxImages) && (
           <div
             className={`
@@ -239,7 +649,6 @@ export const UploadImage: React.FC<UploadImageProps> = ({
           </div>
         )}
 
-        {/* Image Gallery */}
         {images.map((image) => (
           <div
             key={image.id}
@@ -338,100 +747,32 @@ export function CreateProductForm() {
   //   fetchCategories();
   // }, [fetchCategories]);
 
-  const tempId = () => Math.random().toString(36).substring(2, 9);
-
-  // --------------------------------------------------------------------
-  // Size handlers
-  const addSize = () => {
-    setSizes((prev) => [
-      ...prev,
-      { id: tempId(), size: "", quantity: 0, priceModifier: 0 },
-    ]);
-  };
-  const updateSize = (
-    id: string,
-    field: keyof DraftSize,
-    value: string | number
-  ) => {
-    setSizes((prev) =>
-      prev.map((s) =>
-        s.id === id
-          ? { ...s, [field]: field === "size" ? String(value) : Number(value) }
-          : s
-      )
-    );
-  };
-  const removeSize = (id: string) =>
-    setSizes((prev) => prev.filter((s) => s.id !== id));
-
-  // --------------------------------------------------------------------
-  // Price handlers
-  const addPrice = () => {
-    setPrices((prev) => [
-      ...prev,
-      { id: tempId(), price: 0, type: "STANDARD", name: "" },
-    ]);
-  };
-  const updatePrice = (id: string, field: keyof DraftPrice, value: any) => {
-    setPrices((prev) =>
-      prev.map((p) =>
-        p.id === id
-          ? {
-              ...p,
-              [field]:
-                field === "price" || field === "minQuantity"
-                  ? Number(value)
-                  : value,
-            }
-          : p
-      )
-    );
-  };
-  const removePrice = (id: string) =>
-    setPrices((prev) => prev.filter((p) => p.id !== id));
-
-  // --------------------------------------------------------------------
-  // Material handlers
-  const addMaterial = () => {
-    setMaterials((prev) => [...prev, { id: tempId(), name: "" }]);
-  };
-  const updateMaterial = (id: string, name: string) => {
-    setMaterials((prev) =>
-      prev.map((m) => (m.id === id ? { ...m, name } : m))
-    );
-  };
-  const removeMaterial = (id: string) =>
-    setMaterials((prev) => prev.filter((m) => m.id !== id));
-
   // --------------------------------------------------------------------
   // Category handlers
   const addCategory = (catId: string) => {
     const existingCat = existingCategories.find((c) => c.id === catId);
     if (!existingCat) return;
 
-    // Check if already selected
     if (categories.some((c) => c.id === catId)) return;
 
     setCategories((prev) => [
       ...prev,
       { id: existingCat.id, name: existingCat.name, isExisting: true },
     ]);
-    setSelectedCategoryId(""); // Reset dropdown
+    setSelectedCategoryId("");
   };
 
   const removeCategory = (id: string) => {
     setCategories((prev) => prev.filter((c) => c.id !== id));
   };
 
-  // Filter out already selected categories from dropdown
   const availableCategories = existingCategories.filter(
     (cat) => !categories.some((c) => c.id === cat.id)
   );
 
   // --------------------------------------------------------------------
-  // Image handlers (adapt to UploadImage props)
+  // Image handlers
   const handleImagesChange = (newImages: ImageType[]) => {
-    // Convert ImageType[] to DraftImage[] (with isMain instead of featured)
     setImages(
       newImages.map((img) => ({
         id: img.id,
@@ -447,9 +788,10 @@ export function CreateProductForm() {
       return url;
     } catch (error) {
       console.error("Upload error:", error);
-      throw error; // UploadImage will show fallback if we throw
+      throw error;
     }
   };
+
   const handleImageDelete = (id: string) => {
     setImages((prev) => prev.filter((img) => img.id !== id));
   };
@@ -520,14 +862,12 @@ export function CreateProductForm() {
     formAction(formData);
   };
 
-  // Convert images to ImageType format for UploadImage
   const uploadImageDefaultImages: ImageType[] = images.map((img) => ({
     id: img.id,
     url: img.url,
     featured: img.isMain,
   }));
 
-  // --------------------------------------------------------------------
   return (
     <form action={handleSubmit} className="flex flex-col h-full">
       {/* Header */}
@@ -713,288 +1053,28 @@ export function CreateProductForm() {
                 </CardContent>
               </Card>
 
-              {/* Sizes & Inventory */}
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle className="text-base">
-                    Sizes & Inventory
-                  </CardTitle>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={addSize}
-                    disabled={isPending}
-                  >
-                    <Plus className="h-3.5 w-3.5 mr-1" /> Add Size
-                  </Button>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {sizes.length === 0 && (
-                    <p className="text-sm text-muted-foreground text-center py-2">
-                      No sizes added. Click "Add Size" to create inventory
-                      variants.
-                    </p>
-                  )}
-                  {sizes.map((size) => (
-                    <div
-                      key={size.id}
-                      className="flex flex-wrap items-end gap-3 p-3 border rounded-md"
-                    >
-                      <div className="flex-1 min-w-[120px]">
-                        <Label className="text-xs">Size Name</Label>
-                        <Input
-                          list="size-suggestions"
-                          value={size.size}
-                          onChange={(e) =>
-                            updateSize(size.id, "size", e.target.value)
-                          }
-                          placeholder="e.g., S, M, L"
-                          disabled={isPending}
-                        />
-                      </div>
-                      <div className="w-28">
-                        <Label className="text-xs">Quantity</Label>
-                        <Input
-                          type="number"
-                          value={size.quantity}
-                          onChange={(e) =>
-                            updateSize(
-                              size.id,
-                              "quantity",
-                              parseInt(e.target.value) || 0
-                            )
-                          }
-                          min={0}
-                          disabled={isPending}
-                        />
-                      </div>
-                      <div className="w-32">
-                        <Label className="text-xs">Price Modifier ($)</Label>
-                        <Input
-                          type="number"
-                          value={size.priceModifier}
-                          onChange={(e) =>
-                            updateSize(
-                              size.id,
-                              "priceModifier",
-                              parseInt(e.target.value) || 0
-                            )
-                          }
-                          disabled={isPending}
-                        />
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => removeSize(size.id)}
-                        disabled={isPending}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
-                  <datalist id="size-suggestions">
-                    {SIZE_SUGGESTIONS.map((s) => (
-                      <option key={s} value={s} />
-                    ))}
-                  </datalist>
-                </CardContent>
-              </Card>
+              {/* Sizes & Inventory - Standalone Component */}
+              <ProductSizes
+                defaultSizes={sizes}
+                onChange={setSizes}
+                disabled={isPending}
+              />
 
-              {/* Advanced Pricing */}
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle className="text-base">
-                    Additional Pricing Rules
-                  </CardTitle>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={addPrice}
-                    disabled={isPending}
-                  >
-                    <Plus className="h-3.5 w-3.5 mr-1" /> Add Price
-                  </Button>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {prices.length === 0 && (
-                    <p className="text-sm text-muted-foreground text-center py-2">
-                      Optional: Add sale, wholesale, or seasonal prices.
-                    </p>
-                  )}
-                  {prices.map((price) => (
-                    <div
-                      key={price.id}
-                      className="p-3 border rounded-md space-y-2"
-                    >
-                      <div className="flex flex-wrap gap-3">
-                        <div className="flex-1">
-                          <Label className="text-xs">Price Type</Label>
-                          <Select
-                            value={price.type}
-                            onValueChange={(v) =>
-                              updatePrice(price.id, "type", v)
-                            }
-                            disabled={isPending}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {PRICE_TYPES.map((pt) => (
-                                <SelectItem key={pt.value} value={pt.value}>
-                                  {pt.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="w-32">
-                          <Label className="text-xs">Amount ($)</Label>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            value={price.price}
-                            onChange={(e) =>
-                              updatePrice(
-                                price.id,
-                                "price",
-                                parseFloat(e.target.value) || 0
-                              )
-                            }
-                            disabled={isPending}
-                          />
-                        </div>
-                        <div className="w-32">
-                          <Label className="text-xs">Min Quantity</Label>
-                          <Input
-                            type="number"
-                            value={price.minQuantity || ""}
-                            onChange={(e) =>
-                              updatePrice(
-                                price.id,
-                                "minQuantity",
-                                e.target.value
-                                  ? parseInt(e.target.value)
-                                  : undefined
-                              )
-                            }
-                            disabled={isPending}
-                          />
-                        </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => removePrice(price.id)}
-                          disabled={isPending}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      <div className="flex gap-3">
-                        <div className="flex-1">
-                          <Label className="text-xs">
-                            Price Name (optional)
-                          </Label>
-                          <Input
-                            value={price.name || ""}
-                            onChange={(e) =>
-                              updatePrice(price.id, "name", e.target.value)
-                            }
-                            placeholder="e.g., Summer Sale"
-                            disabled={isPending}
-                          />
-                        </div>
-                        <div className="flex-1">
-                          <Label className="text-xs">Start Date</Label>
-                          <Input
-                            type="date"
-                            value={price.startDate || ""}
-                            onChange={(e) =>
-                              updatePrice(price.id, "startDate", e.target.value)
-                            }
-                            disabled={isPending}
-                          />
-                        </div>
-                        <div className="flex-1">
-                          <Label className="text-xs">End Date</Label>
-                          <Input
-                            type="date"
-                            value={price.endDate || ""}
-                            onChange={(e) =>
-                              updatePrice(price.id, "endDate", e.target.value)
-                            }
-                            disabled={isPending}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
+              {/* Additional Pricing Rules - Standalone Component */}
+              <ProductPrices
+                defaultPrices={prices}
+                onChange={setPrices}
+                disabled={isPending}
+              />
 
-              {/* Materials */}
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle className="text-base">Materials</CardTitle>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={addMaterial}
-                    disabled={isPending}
-                  >
-                    <Plus className="h-3.5 w-3.5 mr-1" /> Add Material
-                  </Button>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-wrap gap-2">
-                    {materials.map((material) => (
-                      <div
-                        key={material.id}
-                        className="flex items-center gap-1 border rounded-md px-2 py-1"
-                      >
-                        <Input
-                          list="material-suggestions"
-                          value={material.name}
-                          onChange={(e) =>
-                            updateMaterial(material.id, e.target.value)
-                          }
-                          placeholder="e.g., Cotton"
-                          className="border-0 h-7 w-40 focus:ring-0 p-1"
-                          disabled={isPending}
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6"
-                          onClick={() => removeMaterial(material.id)}
-                          disabled={isPending}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    ))}
-                    {materials.length === 0 && (
-                      <span className="text-sm text-muted-foreground">
-                        No materials added.
-                      </span>
-                    )}
-                  </div>
-                  <datalist id="material-suggestions">
-                    {MATERIAL_SUGGESTIONS.map((m) => (
-                      <option key={m} value={m} />
-                    ))}
-                  </datalist>
-                </CardContent>
-              </Card>
+              {/* Materials - Standalone Component */}
+              <ProductMaterials
+                defaultMaterials={materials}
+                onChange={setMaterials}
+                disabled={isPending}
+              />
 
-              {/* Categories - Simple Dropdown */}
+              {/* Categories */}
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base">Categories</CardTitle>
@@ -1048,7 +1128,7 @@ export function CreateProductForm() {
                 </CardContent>
               </Card>
 
-              {/* Product Images - Using UploadImage component */}
+              {/* Product Images */}
               <Card>
                 <CardContent className="pt-6">
                   <UploadImage
