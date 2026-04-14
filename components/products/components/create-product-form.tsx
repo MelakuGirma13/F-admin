@@ -1,15 +1,5 @@
+
 /* eslint-disable react-hooks/set-state-in-effect */
-
-
-
-
-
-
-
-
-
-
-
 /* eslint-disable react/no-unescaped-entities */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -73,12 +63,6 @@ interface DraftPrice {
 interface DraftMaterial {
   id: string;
   name: string;
-}
-
-interface DraftCategory {
-  id: string;
-  name: string;
-  isExisting: boolean;
 }
 
 interface DraftImage {
@@ -154,10 +138,9 @@ const ProductSizes: React.FC<ProductSizesProps> = ({
     setSizes((prev) => prev.filter((s) => s.id !== id));
   };
 
- 
   useEffect(() => {
     onChange?.(sizes);
-  }, [sizes]);
+  }, [sizes, ]);
 
   return (
     <Card>
@@ -295,10 +278,9 @@ const ProductPrices: React.FC<ProductPricesProps> = ({
     setPrices((prev) => prev.filter((p) => p.id !== id));
   };
 
-  // Notify parent when prices change
   useEffect(() => {
     onChange?.(prices);
-  }, [prices]);
+  }, [prices, ]);
 
   return (
     <Card>
@@ -457,10 +439,9 @@ const ProductMaterials: React.FC<ProductMaterialsProps> = ({
     setMaterials((prev) => prev.filter((m) => m.id !== id));
   };
 
-  // Notify parent when materials change
   useEffect(() => {
     onChange?.(materials);
-  }, [materials, onChange]);
+  }, [materials, ]);
 
   return (
     <Card>
@@ -722,20 +703,18 @@ export function CreateProductForm() {
   const [sizes, setSizes] = useState<DraftSize[]>([]);
   const [prices, setPrices] = useState<DraftPrice[]>([]);
   const [materials, setMaterials] = useState<DraftMaterial[]>([]);
-  const [categories, setCategories] = useState<DraftCategory[]>([]);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
   const [images, setImages] = useState<DraftImage[]>([]);
 
   // Existing categories fetched from server
   const [existingCategories, setExistingCategories] = useState<
     { id: string; name: string }[]
   >([]);
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
 
   // Fetch existing categories on mount
   const fetchCategories = useCallback(async () => {
     try {
       const res = await fetch("/api/categories");
-      console.log("categoriess",res);
       if (res.ok) {
         const data = await res.json();
         setExistingCategories(data);
@@ -747,29 +726,22 @@ export function CreateProductForm() {
 
   useEffect(() => {
     fetchCategories();
-  }, []);
+  }, [fetchCategories]);
 
   // --------------------------------------------------------------------
   // Category handlers
   const addCategory = (catId: string) => {
-    const existingCat = existingCategories.find((c) => c.id === catId);
-    if (!existingCat) return;
-
-    if (categories.some((c) => c.id === catId)) return;
-
-    setCategories((prev) => [
-      ...prev,
-      { id: existingCat.id, name: existingCat.name, isExisting: true },
-    ]);
-    setSelectedCategoryId("");
+    if (!selectedCategoryIds.includes(catId)) {
+      setSelectedCategoryIds((prev) => [...prev, catId]);
+    }
   };
 
-  const removeCategory = (id: string) => {
-    setCategories((prev) => prev.filter((c) => c.id !== id));
+  const removeCategory = (catId: string) => {
+    setSelectedCategoryIds((prev) => prev.filter((id) => id !== catId));
   };
 
   const availableCategories = existingCategories.filter(
-    (cat) => !categories.some((c) => c.id === cat.id)
+    (cat) => !selectedCategoryIds.includes(cat.id)
   );
 
   // --------------------------------------------------------------------
@@ -817,49 +789,61 @@ export function CreateProductForm() {
     basePrice > 0;
 
   // --------------------------------------------------------------------
-  // Submit handler
+  // Submit handler – builds payload exactly matching Prisma schema field names
   const handleSubmit = (formData: FormData) => {
+    const formatDate = (dateStr?: string) =>
+      dateStr ? new Date(dateStr).toISOString() : undefined;
+
     const payload = {
+      // Product scalar fields (snake_case as in DB)
       name: name.trim(),
       company: company.trim(),
       description: description.trim(),
-      basePrice: Number(basePrice),
+      base_price: Number(basePrice),
       collection,
-      isFeatured,
-      isCustom,
+      is_featured: isFeatured,
+      is_custom: isCustom,
+      // user_id will be added server-side from session
+
+      // Relations - field names must match Prisma schema
       sizes: sizes
         .filter((s) => s.size.trim() !== "")
         .map((s) => ({
           size: s.size.trim(),
           quantity: s.quantity,
-          priceModifier: s.priceModifier,
+          price_modifier: s.priceModifier,
         })),
+
       prices: prices
         .filter((p) => p.price > 0)
         .map((p) => ({
           price: p.price,
           type: p.type,
           name: p.name?.trim() || undefined,
-          startDate: p.startDate || undefined,
-          endDate: p.endDate || undefined,
-          minQuantity: p.minQuantity || undefined,
+          start_date: formatDate(p.startDate),
+          end_date: formatDate(p.endDate),
+          min_quantity: p.minQuantity,
+          is_active: true,
         })),
-      materials: materials
+
+      // NOTE: The relation field is "material" (singular), not "materials"
+      material: materials
         .filter((m) => m.name.trim() !== "")
         .map((m) => ({
           name: m.name.trim(),
         })),
-      categories: categories.map((c) => ({
-        id: c.isExisting ? c.id : undefined,
-        name: c.name,
-      })),
+
+      // Implicit many-to-many with categories
+      categories: selectedCategoryIds.map((id) => ({ id })),
+
       images: images
         .filter((img) => img.url.trim() !== "")
         .map((img) => ({
-          url: img.url.trim(),
-          isMainImage: img.isMain,
+          image_url: img.url.trim(),
+          is_main_image: img.isMain,
         })),
     };
+
     formData.set("payload", JSON.stringify(payload));
     formAction(formData);
   };
@@ -869,6 +853,9 @@ export function CreateProductForm() {
     url: img.url,
     featured: img.isMain,
   }));
+
+  const getCategoryName = (id: string) =>
+    existingCategories.find((c) => c.id === id)?.name ?? id;
 
   return (
     <form action={handleSubmit} className="flex flex-col h-full">
@@ -1055,21 +1042,21 @@ export function CreateProductForm() {
                 </CardContent>
               </Card>
 
-              {/* Sizes & Inventory - Standalone Component */}
+              {/* Sizes & Inventory */}
               <ProductSizes
                 defaultSizes={sizes}
                 onChange={setSizes}
                 disabled={isPending}
               />
 
-              {/* Additional Pricing Rules - Standalone Component */}
+              {/* Additional Pricing Rules */}
               <ProductPrices
                 defaultPrices={prices}
                 onChange={setPrices}
                 disabled={isPending}
               />
 
-              {/* Materials - Standalone Component */}
+              {/* Materials */}
               <ProductMaterials
                 defaultMaterials={materials}
                 onChange={setMaterials}
@@ -1084,12 +1071,12 @@ export function CreateProductForm() {
                 <CardContent>
                   <div className="space-y-3">
                     <div className="flex flex-wrap gap-2">
-                      {categories.map((cat) => (
-                        <Badge key={cat.id} variant="secondary" className="gap-1">
-                          {cat.name}
+                      {selectedCategoryIds.map((catId) => (
+                        <Badge key={catId} variant="secondary" className="gap-1">
+                          {getCategoryName(catId)}
                           <button
                             type="button"
-                            onClick={() => removeCategory(cat.id)}
+                            onClick={() => removeCategory(catId)}
                             className="ml-1 hover:text-destructive"
                             disabled={isPending}
                           >
@@ -1097,7 +1084,7 @@ export function CreateProductForm() {
                           </button>
                         </Badge>
                       ))}
-                      {categories.length === 0 && (
+                      {selectedCategoryIds.length === 0 && (
                         <span className="text-sm text-muted-foreground">
                           No categories selected.
                         </span>
@@ -1105,7 +1092,7 @@ export function CreateProductForm() {
                     </div>
 
                     <Select
-                      value={selectedCategoryId}
+                      value=""
                       onValueChange={addCategory}
                       disabled={isPending || availableCategories.length === 0}
                     >

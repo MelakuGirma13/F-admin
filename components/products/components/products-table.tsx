@@ -667,7 +667,7 @@ function ProductRowActions({
   const [isPending, startTransition] = useTransition();
 
   const handleEdit = () => {
-    router.push(`/dashboard/products/${product.id}/edit`);
+    router.push(`/admin/products/${product.id}/edit`);
   };
 
   const handleDelete = async () => {

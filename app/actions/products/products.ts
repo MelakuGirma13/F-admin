@@ -11,28 +11,33 @@ import {
   deleteProduct,
   bulkUpdateActive,
   bulkUpdateFeatured,
-  bulkDeleteProducts,createProduct, CreateProductInput,createProductCategory
+  bulkDeleteProducts,
+  createProduct,
+  CreateProductInput,
+  createProductCategory,
+  updateProduct,
+  deleteProductImage as deleteProductImageDb,
 } from "@/lib/products";
-
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 
-
-// Zod schemas for nested models
+// ----------------------------------------------------------------------
+// Zod schemas matching the payload from the form
 const sizeSchema = z.object({
   size: z.string().min(1),
   quantity: z.number().int().min(0),
-  priceModifier: z.number().int().default(0),
+  price_modifier: z.number().int().default(0), // snake_case
 });
 
 const priceSchema = z.object({
   price: z.number().positive(),
   type: z.string().default("STANDARD"),
   name: z.string().optional(),
-  startDate: z.string().optional(),
-  endDate: z.string().optional(),
-  minQuantity: z.number().int().positive().optional(),
+  start_date: z.string().datetime().optional(), // ISO string
+  end_date: z.string().datetime().optional(),
+  min_quantity: z.number().int().positive().optional(),
+  is_active: z.boolean().default(true),
 });
 
 const materialSchema = z.object({
@@ -40,25 +45,28 @@ const materialSchema = z.object({
 });
 
 const categorySchema = z.object({
-  name: z.string().min(1),
+  id: z.string().min(1),
+  // name is not needed; we connect by ID
 });
 
 const imageSchema = z.object({
-  url: z.string().url(),
-  isMainImage: z.boolean(),
+  image_url: z.string().url(),
+  is_main_image: z.boolean(),
 });
 
+// ----------------------------------------------------------------------
+// Create Product
 const createProductSchema = z.object({
   name: z.string().min(1, "Product name is required"),
   company: z.string().min(1, "Company is required"),
   description: z.string().min(1, "Description is required"),
-  basePrice: z.number().positive("Base price must be positive"),
+  base_price: z.number().positive("Base price must be positive"),
   collection: z.enum(["MEN", "WOMEN"]),
-  isFeatured: z.boolean().default(false),
-  isCustom: z.boolean().default(false),
+  is_featured: z.boolean().default(false),
+  is_custom: z.boolean().default(false),
   sizes: z.array(sizeSchema),
   prices: z.array(priceSchema),
-  materials: z.array(materialSchema),
+  material: z.array(materialSchema), // singular as in schema
   categories: z.array(categorySchema),
   images: z.array(imageSchema),
 });
@@ -72,7 +80,6 @@ export async function createProductAction(
   _prev: CreateProductState,
   formData: FormData
 ): Promise<CreateProductState> {
-  // 1. Extract and parse JSON payload
   const raw = formData.get("payload");
   if (typeof raw !== "string") {
     return { status: "error", message: "Invalid form data." };
@@ -85,7 +92,6 @@ export async function createProductAction(
     return { status: "error", message: "Could not parse form data." };
   }
 
-  // 2. Validate with Zod
   const result = createProductSchema.safeParse(parsed);
   if (!result.success) {
     return {
@@ -99,47 +105,55 @@ export async function createProductAction(
     name,
     company,
     description,
-    basePrice,
+    base_price,
     collection,
-    isFeatured,
-    isCustom,
+    is_featured,
+    is_custom,
     sizes,
     prices,
-    materials,
+    material,
     categories,
     images,
   } = result.data;
 
-  // 3. Authenticate user via Supabase
-  const supabase = await createClient();
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
 
-  if (userError || !user) {
-    return { status: "error", message: "Unauthorized. Please log in." };
-  }
-
-  const userId = user.id;
-
-  // 4. Call product service to create everything
+const userId ='6776c13e-8178-4f4f-8531-b54af8ba8f98'
   try {
+    // The lib function expects CreateProductInput which may use camelCase.
+    // We map snake_case payload to camelCase as needed by the library.
     const product = await createProduct({
       userId,
       name,
       company,
       description,
-      basePrice,
+      basePrice: base_price,
       collection,
-      isFeatured,
-      isCustom,
-      sizes,
-      prices,
-      materials,
-      categories,
-      images,
+      isFeatured: is_featured,
+      isCustom: is_custom,
+      sizes: sizes.map((s) => ({
+        size: s.size,
+        quantity: s.quantity,
+        priceModifier: s.price_modifier,
+      })),
+      prices: prices.map((p) => ({
+        price: p.price,
+        type: p.type,
+        name: p.name,
+        startDate: p.start_date ? new Date(p.start_date) : undefined,
+        endDate: p.end_date ? new Date(p.end_date) : undefined,
+        minQuantity: p.min_quantity,
+        isActive: p.is_active,
+      })),
+      materials: material.map((m) => ({ name: m.name })),
+      categories: categories.map((c) => ({ id: c.id })),
+      images: images.map((img) => ({
+        url: img.image_url,
+        isMainImage: img.is_main_image,
+      })),
     } as CreateProductInput);
 
-    revalidatePath("/products");
-    redirect(`/products/${product.id}?created=true`);
+    //revalidatePath("/products");
+   // redirect(`/products/${product.id}?created=true`);
   } catch (error) {
     console.error("Product creation error:", error);
     return {
@@ -148,6 +162,164 @@ export async function createProductAction(
     };
   }
 }
+
+// ----------------------------------------------------------------------
+// Update Product
+const updateProductSchema = z.object({
+  id: z.string().min(1, "Product ID is required"),
+  name: z.string().min(1, "Product name is required"),
+  company: z.string().min(1, "Company is required"),
+  description: z.string().min(1, "Description is required"),
+  base_price: z.number().positive("Base price must be positive"),
+  collection: z.enum(["MEN", "WOMEN"]),
+  is_featured: z.boolean().default(false),
+  is_custom: z.boolean().default(false),
+  sizes: z.array(sizeSchema),
+  prices: z.array(priceSchema),
+  material: z.array(materialSchema),
+  categories: z.array(categorySchema),
+  images: z.array(imageSchema),
+});
+
+export type UpdateProductState =
+  | { status: "idle" }
+  | { status: "success"; productId: string }
+  | { status: "error"; message: string; fieldErrors?: Record<string, string[]> };
+
+export async function updateProductAction(
+  _prev: UpdateProductState,
+  formData: FormData
+): Promise<UpdateProductState> {
+  const raw = formData.get("payload");
+  if (typeof raw !== "string") {
+    return { status: "error", message: "Invalid form data." };
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return { status: "error", message: "Could not parse form data." };
+  }
+
+  const result = updateProductSchema.safeParse(parsed);
+  if (!result.success) {
+    return {
+      status: "error",
+      message: "Validation failed. Please check the form.",
+      fieldErrors: result.error.flatten().fieldErrors as Record<string, string[]>,
+    };
+  }
+
+  const {
+    id,
+    name,
+    company,
+    description,
+    base_price,
+    collection,
+    is_featured,
+    is_custom,
+    sizes,
+    prices,
+    material,
+    categories,
+    images,
+  } = result.data;
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+  if (userError || !user) {
+    return { status: "error", message: "Unauthorized. Please log in." };
+  }
+
+  try {
+    const product = await updateProduct(id, {
+      name,
+      company,
+      description,
+      basePrice: base_price,
+      collection,
+      isFeatured: is_featured,
+      isCustom: is_custom,
+      sizes: sizes.map((s) => ({
+        size: s.size,
+        quantity: s.quantity,
+        priceModifier: s.price_modifier,
+      })),
+      prices: prices.map((p) => ({
+        price: p.price,
+        type: p.type,
+        name: p.name,
+        startDate: p.start_date ? new Date(p.start_date) : undefined,
+        endDate: p.end_date ? new Date(p.end_date) : undefined,
+        minQuantity: p.min_quantity,
+        isActive: p.is_active,
+      })),
+      materials: material.map((m) => ({ name: m.name })),
+      categories: categories.map((c) => ({ id: c.id })),
+      images: images.map((img) => ({
+        url: img.image_url,
+        isMainImage: img.is_main_image,
+      })),
+    });
+
+    revalidatePath("/products");
+    revalidatePath(`/products/${id}`);
+    revalidateTag("products", "max");
+
+    return { status: "success", productId: product.id };
+  } catch (error) {
+    console.error("Product update error:", error);
+    return {
+      status: "error",
+      message: error instanceof Error ? error.message : "Failed to update product.",
+    };
+  }
+}
+
+// ----------------------------------------------------------------------
+// Delete Product Image (from storage and database)
+export async function deleteProductImage(imageId: string): Promise<{ error?: string }> {
+  try {
+    const supabase = await createClient();
+
+    const { data: image, error: fetchError } = await supabase
+      .from("ProductImage")
+      .select("image_url") // note: column is image_url per schema
+      .eq("id", imageId)
+      .single();
+
+    if (fetchError || !image) {
+      throw new Error("Image not found in database.");
+    }
+
+    const path = image.image_url;
+    const { error: storageError } = await supabase.storage
+      .from("products_bucket")
+      .remove([path]);
+
+    if (storageError) {
+      console.error("Storage deletion error:", storageError);
+    }
+
+    await deleteProductImageDb(imageId);
+
+    revalidatePath("/products");
+    revalidateTag("products", "max");
+
+    return {};
+  } catch (error) {
+    console.error("Delete image error:", error);
+    return { error: error instanceof Error ? error.message : "Failed to delete image." };
+  }
+}
+
+// ----------------------------------------------------------------------
+// Path and tag invalidation
 const PATH = "/products";
 const PRODUCTS_TAG = "products";
 
@@ -156,7 +328,8 @@ function invalidate() {
   revalidateTag(PRODUCTS_TAG, "max");
 }
 
-// Single product actions
+// ----------------------------------------------------------------------
+// Single product toggle actions
 export async function updateProductActiveStatusAction(
   productId: string,
   isActive: boolean
@@ -195,6 +368,7 @@ export async function deleteProductAction(
   }
 }
 
+// ----------------------------------------------------------------------
 // Bulk actions
 export async function bulkUpdateActiveStatusAction(
   productIds: string[],
@@ -234,7 +408,8 @@ export async function bulkDeleteProductsAction(
   }
 }
 
-// Additional toggle actions for convenience (used by ProductDetailSheet)
+// ----------------------------------------------------------------------
+// Convenience aliases
 export async function toggleProductFeaturedAction(
   productId: string,
   isFeatured: boolean
@@ -249,29 +424,18 @@ export async function toggleProductActiveAction(
   return updateProductActiveStatusAction(productId, isActive);
 }
 
-
-
-
-
-
-
-//import { createClient } from "@/utils/supabase/server"; // your Supabase server client
-
+// ----------------------------------------------------------------------
+// Image upload to Supabase Storage
 export async function uploadImageToSupabase(file: File): Promise<string> {
   const supabase = await createClient();
 
-  // Generate a unique filename
   const fileExt = file.name.split(".").pop();
-  const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
-  const filePath = `public/${fileName}`;
-
-  // Convert File to ArrayBuffer/Blob for server upload
-  const arrayBuffer = await file.arrayBuffer();
-  const buffer = Buffer.from(arrayBuffer);
+  const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 10)}.${fileExt}`;
+  const filePath = fileName;
 
   const { data, error } = await supabase.storage
-    .from("images") // your bucket name
-    .upload(filePath, buffer, {
+    .from("products_bucket")
+    .upload(filePath, file, {
       contentType: file.type,
       cacheControl: "3600",
       upsert: false,
@@ -281,33 +445,29 @@ export async function uploadImageToSupabase(file: File): Promise<string> {
     throw new Error(`Upload failed: ${error.message}`);
   }
 
-  // // Get public URL
-  // const { data: publicUrlData } = supabase.storage
-  //   .from("product-images")
-  //   .getPublicUrl(data.path);
+  const {
+    data: { publicUrl },
+  } = supabase.storage.from("products_bucket").getPublicUrl(data.path);
 
-  return data.path;
+  return publicUrl;
 }
 
-
-
-
-
-
-// Zod validation schema
+// ----------------------------------------------------------------------
+// Category creation
 const createCategorySchema = z.object({
   name: z.string().min(1, "Category name is required").max(255),
   description: z.string().optional(),
 });
 
-
 export async function createCategoryAction(input: {
   name: string;
   description?: string;
 }) {
-  // 1. Authenticate user
   const supabase = await createClient();
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
 
   if (userError || !user) {
     return {
@@ -316,32 +476,20 @@ export async function createCategoryAction(input: {
     };
   }
 
-  // Optional: Check for admin role if needed
-  // const { data: roleData } = await supabase.from('user_roles').select('role_id').eq('user_id', user.id);
-  // if (!roleData?.some(r => r.role_id === 'admin')) {
-  //   return { success: false, error: "Admin access required." };
-  // }
-
-  // 2. Validate input
   const validation = createCategorySchema.safeParse(input);
   if (!validation.success) {
     return {
-      status: "error",
-      message: "Validation failed. Please check the form.",
+      success: false,
+      error: "Validation failed. Please check the form.",
       fieldErrors: validation.error.flatten().fieldErrors as Record<string, string[]>,
     };
   }
 
-  // 3. Create category via service
   try {
     const category = await createProductCategory({
       name: validation.data.name,
       description: validation.data.description,
     });
-
-    // // Revalidate any pages that list categories (e.g., the product form, categories page)
-    // revalidatePath("/products");
-    // revalidatePath("/api/categories"); // if you have an API endpoint
 
     return {
       success: true,
