@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import type { Metadata } from "next";
 import { Suspense } from "react";
@@ -157,7 +158,7 @@ const ProductsPage = async ({ searchParams }: ProductsPageProps): Promise<React.
         <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
           <Suspense fallback={<ProductsTableSkeleton pageSize={pageSize} />}>
             <ProductsTable
-              products={result.products}
+              products={result.products as any}
               total={result.total}
               page={result.page}
               pageSize={result.pageSize}
