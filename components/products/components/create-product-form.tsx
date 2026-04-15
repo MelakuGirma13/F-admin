@@ -862,7 +862,7 @@ export function CreateProductForm() {
       {/* Header */}
       <header className="flex items-center justify-between px-6 py-4 border-b border-border bg-background shrink-0">
         <div className="flex items-center gap-3">
-          <Link href="/products">
+          <Link href="/admin/products">
             <Button
               variant="ghost"
               size="icon"
@@ -883,7 +883,7 @@ export function CreateProductForm() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Link href="/products">
+          <Link href="/admin/products">
             <Button
               variant="outline"
               size="sm"

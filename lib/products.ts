@@ -182,7 +182,7 @@ export async function getProducts(
   ]);
 
   return {
-    products: productsData,
+    products:JSON.parse(JSON.stringify(productsData)) ,
     total,
     page,
     pageSize,

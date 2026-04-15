@@ -161,7 +161,7 @@ export function ProductDetail({ product }: ProductDetailProps) {
       {/* Header - improved vertical alignment */}
       <header className="flex items-center justify-between px-6 py-4 border-b border-border bg-background shrink-0">
         <div className="flex items-center gap-4">
-          <Link href="/products">
+          <Link href="/admin/products">
             <Button
               variant="ghost"
               size="icon"
@@ -182,7 +182,7 @@ export function ProductDetail({ product }: ProductDetailProps) {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Link href={`/products/${product.id}/edit`}>
+          <Link href={`/admin/products/${product.id}/edit`}>
             <Button variant="outline" size="sm" type="button">
               <Edit className="mr-2 h-4 w-4" />
               Edit Product
