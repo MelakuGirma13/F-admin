@@ -69,8 +69,8 @@ export async function getProductById(id: string): Promise<ProductWithRelations> 
   if (!product) {
     throw new Error(`Product not found`);
   }
-
-  return product;
+  return JSON.parse(JSON.stringify(product));
+ // return product;
 }
 
 /**
@@ -293,7 +293,7 @@ export interface CreateProductInput {
     endDate?: Date;
     minQuantity?: number;
   }>;
-  materials: Array<{ name: string }>;
+  material: Array<{ name: string }>;
   categories: Array<{ id: string }>;
   images: Array<{ url: string; isMainImage: boolean }>;
 }
@@ -344,7 +344,7 @@ export async function createProduct(input: CreateProductInput): Promise<ProductW
 
       // Create materials (note: relation is named "material" in the schema)
       material: {
-        create: input.materials.map((m) => ({
+        create: input.material.map((m) => ({
           name: m.name,
         })),
       },
@@ -379,113 +379,94 @@ export interface UpdateProductInput {
     endDate?: Date;
     minQuantity?: number;
   }>;
-  materials?: Array<{ name: string }>;
+  material?: Array<{ name: string }>;
   categories?: Array<{ id: string }>;
   images?: Array<{ url: string; isMainImage: boolean }>;
 }
+
+
 
 export async function updateProduct(
   productId: string,
   input: UpdateProductInput
 ): Promise<ProductWithRelations> {
-  return await db.$transaction(async (tx) => {
-    // Prepare category operation
-    let categoryOperation = {};
-    if (input.categories !== undefined) {
-      categoryOperation = {
-        categories: {
-          set: input.categories.map((cat) => ({ id: cat.id })),
-        },
-      };
-    }
+  // Build the update data object with nested writes
+  const updateData: Prisma.ProductUpdateInput = {};
 
-    // Update product basic fields
-    await tx.product.update({
-      where: { id: productId },
-      data: {
-        ...(input.name !== undefined && { name: input.name }),
-        ...(input.company !== undefined && { company: input.company }),
-        ...(input.description !== undefined && { description: input.description }),
-        ...(input.basePrice !== undefined && { base_price: input.basePrice }),
-        ...(input.collection !== undefined && { collection: input.collection }),
-        ...(input.isFeatured !== undefined && { is_featured: input.isFeatured }),
-        ...(input.isCustom !== undefined && { is_custom: input.isCustom }),
-        ...categoryOperation,
-      },
-    });
+  // Basic scalar fields
+  if (input.name !== undefined) updateData.name = input.name;
+  if (input.company !== undefined) updateData.company = input.company;
+  if (input.description !== undefined) updateData.description = input.description;
+  if (input.basePrice !== undefined) updateData.base_price = input.basePrice;
+  if (input.collection !== undefined) updateData.collection = input.collection;
+  if (input.isFeatured !== undefined) updateData.is_featured = input.isFeatured;
+  if (input.isCustom !== undefined) updateData.is_custom = input.isCustom;
 
-    // Replace strategy for nested relations (delete all, recreate)
-    if (input.sizes !== undefined) {
-      await tx.productSize.deleteMany({ where: { product_id: productId } });
-      if (input.sizes.length > 0) {
-        await tx.productSize.createMany({
-          data: input.sizes.map((s) => ({
-            size: s.size,
-            quantity: s.quantity,
-            price_modifier: s.priceModifier,
-            product_id: productId,
-          })),
-        });
-      }
-    }
+  // Categories: replace all connections
+  if (input.categories !== undefined) {
+    updateData.categories = {
+      set: input.categories.map((cat) => ({ id: cat.id })),
+    };
+  }
 
-    if (input.prices !== undefined) {
-      await tx.productPrice.deleteMany({ where: { product_id: productId } });
-      if (input.prices.length > 0) {
-        await tx.productPrice.createMany({
-          data: input.prices.map((p) => ({
-            price: p.price,
-            type: p.type,
-            name: p.name ?? null,
-            start_date: p.startDate ?? null,
-            end_date: p.endDate ?? null,
-            min_quantity: p.minQuantity ?? null,
-            is_active: true,
-            product_id: productId,
-          })),
-        });
-      }
-    }
+  // Sizes: delete all and create new ones (replace strategy)
+  if (input.sizes !== undefined) {
+    updateData.sizes = {
+      deleteMany: {},
+      create: input.sizes.map((s) => ({
+        size: s.size,
+        quantity: s.quantity,
+        price_modifier: s.priceModifier,
+      })),
+    };
+  }
 
-    if (input.materials !== undefined) {
-      await tx.material.deleteMany({ where: { product_id: productId } });
-      if (input.materials.length > 0) {
-        await tx.material.createMany({
-          data: input.materials.map((m) => ({
-            name: m.name,
-            product_id: productId,
-          })),
-        });
-      }
-    }
+  // Prices: delete all and create new ones
+  if (input.prices !== undefined) {
+    updateData.prices = {
+      deleteMany: {},
+      create: input.prices.map((p) => ({
+        price: p.price,
+        type: p.type,
+        name: p.name ?? null,
+        start_date: p.startDate ?? null,
+        end_date: p.endDate ?? null,
+        min_quantity: p.minQuantity ?? null,
+        is_active: true,
+      })),
+    };
+  }
 
-    if (input.images !== undefined) {
-      await tx.productImage.deleteMany({ where: { product_id: productId } });
-      if (input.images.length > 0) {
-        await tx.productImage.createMany({
-          data: input.images.map((img) => ({
-            image_url: img.url,
-            is_main_image: img.isMainImage,
-            product_id: productId,
-          })),
-        });
-      }
-    }
+  // Materials: delete all and create new ones (relation name is "material")
+  if (input.material !== undefined) {
+    updateData.material = {
+      deleteMany: {},
+      create: input.material.map((m) => ({
+        name: m.name,
+      })),
+    };
+  }
 
-    // Fetch updated product
-    const completeProduct = await tx.product.findUnique({
-      where: { id: productId },
-      include: productInclude,
-    });
+  // Images: delete all and create new ones
+  if (input.images !== undefined) {
+    updateData.images = {
+      deleteMany: {},
+      create: input.images.map((img) => ({
+        image_url: img.url,
+        is_main_image: img.isMainImage,
+      })),
+    };
+  }
 
-    if (!completeProduct) {
-      throw new Error("Failed to retrieve updated product");
-    }
-
-    return completeProduct;
+  // Perform a single update with all nested operations
+  const updatedProduct = await db.product.update({
+    where: { id: productId },
+    data: updateData,
+    include: productInclude,
   });
-}
 
+  return updatedProduct;
+}
 // ============================================================================
 // DELETE PRODUCT IMAGE
 // ============================================================================

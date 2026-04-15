@@ -53,7 +53,7 @@ import {
 } from "@/types/products";
 import { gooeyToast } from "@/components/ui/goey-toaster";
 
-// Dynamically import detail sheet
+
 // const ProductDetailSheet = dynamic(
 //   () => import("./product-detail-sheet").then((m) => m.ProductDetailSheet),
 //   { ssr: false }
@@ -669,7 +669,9 @@ function ProductRowActions({
   const handleEdit = () => {
     router.push(`/admin/products/${product.id}/edit`);
   };
-
+  const handleDetail = () => {
+    router.push(`/admin/products/${product.id}/detail`);
+  };
   const handleDelete = async () => {
     if (!confirm(`Delete "${product.name}"? This action cannot be undone.`)) return;
     startTransition(async () => {
@@ -690,7 +692,8 @@ function ProductRowActions({
         variant="ghost"
         size="icon"
         className="h-8 w-8 text-muted-foreground hover:text-foreground"
-        onClick={() => onViewDetails(product)}
+        //onClick={() => onViewDetails(product)}
+        onClick={handleDetail}
         aria-label="View details"
       >
         <Package className="h-4 w-4" />

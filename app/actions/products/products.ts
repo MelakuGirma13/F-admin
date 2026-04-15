@@ -144,7 +144,7 @@ const userId ='6776c13e-8178-4f4f-8531-b54af8ba8f98'
         minQuantity: p.min_quantity,
         isActive: p.is_active,
       })),
-      materials: material.map((m) => ({ name: m.name })),
+      material: material.map((m) => ({ name: m.name })),
       categories: categories.map((c) => ({ id: c.id })),
       images: images.map((img) => ({
         url: img.image_url,
@@ -154,6 +154,7 @@ const userId ='6776c13e-8178-4f4f-8531-b54af8ba8f98'
 
     //revalidatePath("/products");
    // redirect(`/products/${product.id}?created=true`);
+   return { status: "success", productId: product.id };
   } catch (error) {
     console.error("Product creation error:", error);
     return {
@@ -198,11 +199,13 @@ export async function updateProductAction(
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
+    console.log("parsedupdate",parsed);
   } catch {
     return { status: "error", message: "Could not parse form data." };
   }
 
   const result = updateProductSchema.safeParse(parsed);
+  console.log("parsedupdateresult",result);
   if (!result.success) {
     return {
       status: "error",
@@ -227,14 +230,7 @@ export async function updateProductAction(
     images,
   } = result.data;
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-  if (userError || !user) {
-    return { status: "error", message: "Unauthorized. Please log in." };
-  }
+
 
   try {
     const product = await updateProduct(id, {
@@ -259,7 +255,7 @@ export async function updateProductAction(
         minQuantity: p.min_quantity,
         isActive: p.is_active,
       })),
-      materials: material.map((m) => ({ name: m.name })),
+      material: material.map((m) => ({ name: m.name })),
       categories: categories.map((c) => ({ id: c.id })),
       images: images.map((img) => ({
         url: img.image_url,
@@ -267,9 +263,9 @@ export async function updateProductAction(
       })),
     });
 
-    revalidatePath("/products");
-    revalidatePath(`/products/${id}`);
-    revalidateTag("products", "max");
+    // revalidatePath("/products");
+    // revalidatePath(`/products/${id}`);
+    // revalidateTag("products", "max");
 
     return { status: "success", productId: product.id };
   } catch (error) {
