@@ -305,7 +305,7 @@ export function PageLoadingSkeleton() {
   
           {/* Main Card — filters, table, and pagination */}
           <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
-            <ProductsTableSkeleton pageSize={10} />
+            <TableSkeleton pageSize={10} />
           </div>
         </div>
       </main>
@@ -313,7 +313,7 @@ export function PageLoadingSkeleton() {
   }
   
   // Optional: separate table skeleton for reuse in Suspense fallback
-  export function ProductsTableSkeleton({ pageSize = 10 }: { pageSize?: number }) {
+  export function TableSkeleton({ pageSize = 10 }: { pageSize?: number }) {
     return (
       <div className="p-4">
         {/* Filters row */}

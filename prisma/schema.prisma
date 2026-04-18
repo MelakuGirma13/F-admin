@@ -449,3 +449,81 @@ view AverageProductRating {
   @@schema("public")
   @@map("AverageProductRating") 
 }
+
+
+
+
+model Customer {
+  id               String    @id @default(cuid())
+  squareId         String?   @unique @map("square_id")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  // Core identifying fields – email is optional to match Square
+  givenName        String    @map("given_name")
+  emailAddress     String?   @map("email_address")      // optional, as Square allows null
+  phoneNumber      String?   @map("phone_number")
+  familyName       String?   @map("family_name")
+  companyName      String?   @map("company_name")
+
+  // Additional Square fields
+  referenceId      String?   @map("reference_id")
+  note             String?   @map("note")
+  birthday         String?   @map("birthday")            // Square returns "YYYY-MM-DD"
+  creationSource   String?   @map("creation_source")     // e.g., "THIRD_PARTY", "DIRECTORY"
+  version          Int?      @map("version")             // Square optimistic locking field
+
+  preferences      Json?     @map("preferences")         // e.g., { "email_unsubscribed": false }
+  groupIds         String[]  @map("group_ids")           // PostgreSQL array; use Json for MySQL
+  segmentIds       String[]  @map("segment_ids")
+
+  // Default address relationship – now with @unique to satisfy one-to-one requirement
+  defaultAddressId String?   @unique @map("default_address_id")
+  defaultAddress   Address?  @relation("CustomerDefaultAddress", fields: [defaultAddressId], references: [id])
+
+  // All addresses
+  addresses        Address[]
+
+  @@map("customers")
+  @@index([squareId])
+  @@index([emailAddress])
+  @@schema("public")
+}
+
+// ------------------------------------------------------------------------------------
+// Address model – full Square address representation plus e‑commerce fields.
+// ------------------------------------------------------------------------------------
+model Address {
+  id                           String   @id @default(cuid())
+  customerId                   String   @map("customer_id")
+  customer                     Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  // Address purpose (Square: "SHIPPING", "BILLING")
+  addressType                  String?  @map("address_type")
+
+  // Contact at this address (may differ from customer profile)
+  firstName                    String?  @map("first_name")
+  lastName                     String?  @map("last_name")
+  organization                 String?  @map("organization")
+  phoneNumber                  String?  @map("phone_number")
+
+  // Physical address
+  addressLine1                 String?  @map("address_line_1")
+  addressLine2                 String?  @map("address_line_2")
+  locality                     String?  // city
+  administrativeDistrictLevel1 String?  @map("administrative_district_level_1") // state/province
+  sublocality                  String?  // district/neighborhood
+  postalCode                   String?  @map("postal_code")
+  country                      String?  // two‑letter country code (e.g., "US")
+
+  // Square's internal address ID for idempotent updates
+  squareAddressId              String?  @unique @map("square_address_id")
+
+  // Reverse relation for default address
+  customerDefault              Customer? @relation("CustomerDefaultAddress")
+
+  @@map("addresses")
+  @@index([customerId])
+  @@index([squareAddressId])
+  @@schema("public")
+}

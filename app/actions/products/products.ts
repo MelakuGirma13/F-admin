@@ -304,8 +304,8 @@ export async function deleteProductImage(imageId: string): Promise<{ error?: str
 
     await deleteProductImageDb(imageId);
 
-    revalidatePath("/products");
-    revalidateTag("products", "max");
+    // revalidatePath("/products");
+    // revalidateTag("products", "max");
 
     return {};
   } catch (error) {

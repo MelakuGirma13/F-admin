@@ -1,10 +1,3 @@
-
-
-
-
-
-
-
 "use client";
 
 import { useState, useTransition, useCallback } from "react";
@@ -29,51 +22,35 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
   Loader2,
-  Package,
+  Users,
   X,
+  Mail,
+  Phone,
+  MoreHorizontal,
 } from "lucide-react";
-import { ProductsFilters } from "./products-filters";
-
+import { CustomersFilters } from "./customers-filters";
 import Pagination from "@/components/common/Pagination";
 import {
-  bulkUpdateActiveStatusAction,
-  bulkUpdateFeaturedAction,
-  bulkDeleteProductsAction,
-} from "@/app/actions/products/products";
+  bulkDeleteCustomersAction,
+  // Additional bulk actions can be added here
+} from "@/app/actions/customers/customers";
 import {
-  Product,
+  Customer,
   SortField,
   SortDir,
-  PRODUCT_ACTIVE_OPTIONS,
-  PRODUCT_FEATURED_OPTIONS,
-} from "@/types/products";
+} from "@/types/customers";
 import { gooeyToast } from "@/components/ui/goey-toaster";
 
-const formatCurrency = (n: number) =>
-  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
-
-const formatDate = (d: string) =>
+const formatDate = (d: string | Date) =>
   new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
   }).format(new Date(d));
-
-const formatRating = (rating: number | null | undefined) => {
-  if (rating === null || rating === undefined) return "—";
-  return rating.toFixed(1);
-};
 
 // ─── Sort button ─────────────────────────────────────────────────────────────
 
@@ -116,39 +93,9 @@ function SortButton({
   );
 }
 
-// ─── Badges ───────────────────────────────────────────────────────────────────
-
-function ActiveBadge({ isActive }: { isActive: boolean }) {
-  return (
-    <span
-      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-        isActive
-          ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-          : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-      }`}
-    >
-      {isActive ? "Active" : "Inactive"}
-    </span>
-  );
-}
-
-function FeaturedBadge({ isFeatured }: { isFeatured: boolean }) {
-  return (
-    <span
-      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-        isFeatured
-          ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
-          : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
-      }`}
-    >
-      {isFeatured ? "Featured" : "Standard"}
-    </span>
-  );
-}
-
 // ─── Skeleton ────────────────────────────────────────────────────────────────
 
-function TableSkeleton({ rows = 10, cols = 8 }: { rows?: number; cols?: number }) {
+function TableSkeleton({ rows = 10, cols = 6 }: { rows?: number; cols?: number }) {
   return (
     <div className="overflow-x-auto">
       <Table>
@@ -182,51 +129,39 @@ function TableSkeleton({ rows = 10, cols = 8 }: { rows?: number; cols?: number }
 
 // ─── Props ───────────────────────────────────────────────────────────────────
 
-interface ProductsTableProps {
-  products: Product[];
+interface CustomersTableProps {
+  customers: Customer[];
   total: number;
   page: number;
   pageSize: number;
   totalPages: number;
   search: string;
-  isActive: "all" | "active" | "inactive";
-  isFeatured: "all" | "featured" | "not-featured";
-  categoryId: string;
-  priceMin: string;
-  priceMax: string;
   dateFrom: string;
   dateTo: string;
   sortField: SortField;
   sortDir: SortDir;
-  categories: { id: string; name: string }[];
   isLoading?: boolean;
 }
 
 // ─── Column helper ────────────────────────────────────────────────────────────
 
-const col = createColumnHelper<Product>();
+const col = createColumnHelper<Customer>();
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
-export function ProductsTable({
-  products,
+export function CustomersTable({
+  customers,
   total,
   page,
   pageSize,
   totalPages,
   search,
-  isActive,
-  isFeatured,
-  categoryId,
-  priceMin,
-  priceMax,
   dateFrom,
   dateTo,
   sortField,
   sortDir,
-  categories,
   isLoading = false,
-}: ProductsTableProps) {
+}: CustomersTableProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -267,158 +202,97 @@ export function ProductsTable({
         <Checkbox
           checked={row.getIsSelected()}
           onCheckedChange={(v) => row.toggleSelected(!!v)}
-          aria-label={`Select product ${row.original.id}`}
+          aria-label={`Select customer ${row.original.id}`}
           className="translate-y-px"
         />
       ),
     }),
-    col.accessor("name", {
-      id: "name",
-      enableHiding: false,
-      header: () => (
-        <SortButton
-          label="Product"
-          field="name"
-          currentField={sortField}
-          currentDir={sortDir}
-          onSort={pushSort}
-          disabled={isPending}
-        />
-      ),
-      cell: (info) => {
-        const product = info.row.original;
-        return (
-          <button
-            className="text-sm font-medium text-foreground transition-colors hover:text-primary hover:underline"
-            onClick={() => router.push(`/admin/products/${product.id}/detail`)}
-          >
-            {info.getValue()}
-          </button>
-        );
+    col.accessor(
+      (row) => {
+        const given = row.givenName || "";
+        const family = row.familyName || "";
+        return `${given} ${family}`.trim() || "—";
       },
-    }),
-    col.accessor("company", {
-      header: () => (
-        <SortButton
-          label="Company"
-          field="company"
-          currentField={sortField}
-          currentDir={sortDir}
-          onSort={pushSort}
-          disabled={isPending}
-        />
-      ),
-      cell: (info) => (
-        <span className="text-sm text-muted-foreground max-w-36 truncate block">
-          {info.getValue()}
-        </span>
-      ),
-    }),
-    col.accessor("base_price", {
-      header: () => (
-        <div className="flex justify-end">
+      {
+        id: "name",
+        enableHiding: false,
+        header: () => (
           <SortButton
-            label="Price"
-            field="base_price"
+            label="Name"
+            field="givenName"
             currentField={sortField}
             currentDir={sortDir}
             onSort={pushSort}
             disabled={isPending}
           />
-        </div>
-      ),
-      cell: (info) => (
-        <div className="text-right text-sm font-semibold text-foreground tabular-nums">
-          {formatCurrency(info.getValue())}
-        </div>
-      ),
-    }),
-    col.accessor("is_active", {
+        ),
+        cell: (info) => {
+          const customer = info.row.original;
+          return (
+            <button
+              className="text-sm font-medium text-foreground transition-colors hover:text-primary hover:underline"
+              onClick={() => router.push(`/admin/customers/${customer.id}`)}
+            >
+              {info.getValue()}
+            </button>
+          );
+        },
+      }
+    ),
+    col.accessor("emailAddress", {
+      id: "emailAddress",
       header: () => (
         <SortButton
-          label="Status"
-          field="is_active"
+          label="Email"
+          field="emailAddress"
           currentField={sortField}
           currentDir={sortDir}
           onSort={pushSort}
           disabled={isPending}
         />
       ),
-      cell: (info) => <ActiveBadge isActive={info.getValue()} />,
+      cell: (info) => {
+        const email = info.getValue();
+        return email ? (
+          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+            <Mail className="h-3.5 w-3.5" />
+            <span className="truncate">{email}</span>
+          </div>
+        ) : (
+          <span className="text-sm text-muted-foreground/60">—</span>
+        );
+      },
     }),
-    col.accessor("is_featured", {
+    col.accessor("phoneNumber", {
+      id: "phoneNumber",
       header: () => (
         <SortButton
-          label="Featured"
-          field="is_featured"
+          label="Phone"
+          field="phoneNumber"
           currentField={sortField}
           currentDir={sortDir}
           onSort={pushSort}
           disabled={isPending}
         />
       ),
-      cell: (info) => <FeaturedBadge isFeatured={info.getValue()} />,
-    }),
-    col.accessor("categories", {
-      id: "categories",
-      header: () => (
-        <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-          Categories
-        </span>
-      ),
       cell: (info) => {
-        const cats = info.getValue();
-        if (!cats || cats.length === 0) return <span className="text-muted-foreground">—</span>;
-        return (
-          <div className="flex flex-wrap gap-1">
-            {cats.slice(0, 2).map((cat) => (
-              <span
-                key={cat.id}
-                className="inline-flex rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground"
-              >
-                {cat.name}
-              </span>
-            ))}
-            {cats.length > 2 && (
-              <span className="text-xs text-muted-foreground">+{cats.length - 2}</span>
-            )}
+        const phone = info.getValue();
+        return phone ? (
+          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+            <Phone className="h-3.5 w-3.5" />
+            <span>{phone}</span>
           </div>
+        ) : (
+          <span className="text-sm text-muted-foreground/60">—</span>
         );
       },
     }),
-    col.accessor("averageRating", {
-      id: "averageRating",
-      header: () => (
-        <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-          Rating
-        </span>
-      ),
-      cell: (info) => {
-        const rating = info.getValue();
-        const avg = rating?.average_rating;
-        const count = rating?.review_count;
-        return (
-          <div className="text-sm">
-            {avg ? (
-              <span className="font-medium text-amber-600 dark:text-amber-400">
-                {formatRating(avg)} ★
-              </span>
-            ) : (
-              <span className="text-muted-foreground">—</span>
-            )}
-            {count !== null && count !== undefined && count > 0 && (
-              <span className="ml-1 text-xs text-muted-foreground">({count})</span>
-            )}
-          </div>
-        );
-      },
-    }),
-    col.accessor("created_at", {
-      id: "created_at",
+    col.accessor("createdAt", {
+      id: "createdAt",
       header: () => (
         <SortButton
           label="Created"
-          field="created_at"
+          field="createdAt"
           currentField={sortField}
           currentDir={sortDir}
           onSort={pushSort}
@@ -427,19 +301,19 @@ export function ProductsTable({
       ),
       cell: (info) => (
         <span className="text-sm whitespace-nowrap text-muted-foreground">
-          {formatDate(info.getValue().toString())}
+          {formatDate(info.getValue())}
         </span>
       ),
     }),
     col.display({
       id: "actions",
       enableHiding: false,
-      cell: ({ row }) => <ProductRowActions product={row.original} />,
+      cell: ({ row }) => <CustomerRowActions customer={row.original} />,
     }),
   ];
 
   const table = useReactTable({
-    data: products,
+    data: customers,
     columns,
     state: {
       sorting,
@@ -459,45 +333,18 @@ export function ProductsTable({
   const selectedIds = Object.keys(rowSelection).filter((id) => rowSelection[id]);
 
   // ── Bulk actions ──────────────────────────────────────────────────────────
-  const bulkSetActive = (active: boolean) => {
-    startTransition(async () => {
-      const res = await bulkUpdateActiveStatusAction(selectedIds, active);
-      if (res.error) {
-        gooeyToast.error("", { description: res.error });
-      } else {
-        gooeyToast.success("Status updated.", {
-          description: `${selectedIds.length} product${selectedIds.length > 1 ? "s" : ""} marked as ${active ? "active" : "inactive"}.`,
-        });
-        setRowSelection({});
-      }
-    });
-  };
-
-  const bulkSetFeatured = (featured: boolean) => {
-    startTransition(async () => {
-      const res = await bulkUpdateFeaturedAction(selectedIds, featured);
-      if (res.error) {
-        gooeyToast.error("", { description: res.error });
-      } else {
-        gooeyToast.success("Featured status updated.", {
-          description: `${selectedIds.length} product${selectedIds.length > 1 ? "s" : ""} ${featured ? "featured" : "unfeatured"}.`,
-        });
-        setRowSelection({});
-      }
-    });
-  };
-
   const bulkDelete = () => {
-    if (!confirm(`Delete ${selectedIds.length} product(s)? This action cannot be undone.`)) return;
+    if (!confirm(`Delete ${selectedIds.length} customer(s)? This action cannot be undone.`)) return;
     startTransition(async () => {
-      const res = await bulkDeleteProductsAction(selectedIds);
+      const res = await bulkDeleteCustomersAction(selectedIds);
       if (res.error) {
         gooeyToast.error("", { description: res.error });
       } else {
-        gooeyToast.success("Products deleted.", {
-          description: `${selectedIds.length} product${selectedIds.length > 1 ? "s" : ""} removed.`,
+        gooeyToast.success("Customers deleted.", {
+          description: `${selectedIds.length} customer${selectedIds.length > 1 ? "s" : ""} removed.`,
         });
         setRowSelection({});
+        router.refresh();
       }
     });
   };
@@ -505,19 +352,13 @@ export function ProductsTable({
   return (
     <>
       <div className="border-b border-border px-5 py-4">
-        <ProductsFilters
+        <CustomersFilters
           search={search}
-          isActive={isActive}
-          isFeatured={isFeatured}
-          categoryId={categoryId}
-          priceMin={priceMin}
-          priceMax={priceMax}
           dateFrom={dateFrom}
           dateTo={dateTo}
           pageSize={pageSize}
           total={total}
           table={table}
-          categories={categories}
         />
       </div>
 
@@ -527,42 +368,6 @@ export function ProductsTable({
             {selectedIds.length} selected
           </span>
           <div className="ml-2 flex flex-wrap items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 text-xs"
-              disabled={isPending}
-              onClick={() => bulkSetActive(true)}
-            >
-              Set active
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 text-xs"
-              disabled={isPending}
-              onClick={() => bulkSetActive(false)}
-            >
-              Set inactive
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 text-xs"
-              disabled={isPending}
-              onClick={() => bulkSetFeatured(true)}
-            >
-              Set featured
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 text-xs"
-              disabled={isPending}
-              onClick={() => bulkSetFeatured(false)}
-            >
-              Remove featured
-            </Button>
             <Button
               variant="destructive"
               size="sm"
@@ -588,10 +393,10 @@ export function ProductsTable({
 
       {isLoading ? (
         <TableSkeleton rows={pageSize} />
-      ) : products.length === 0 ? (
+      ) : customers.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-3 py-20 text-muted-foreground">
-          <Package className="h-10 w-10 opacity-40" />
-          <p className="text-sm font-medium">No products found</p>
+          <Users className="h-10 w-10 opacity-40" />
+          <p className="text-sm font-medium">No customers found</p>
           <p className="text-xs">Try adjusting your search or filter criteria.</p>
         </div>
       ) : (
@@ -649,27 +454,29 @@ export function ProductsTable({
 
 // ─── Row Actions Component ──────────────────────────────────────────────────
 
-function ProductRowActions({ product }: { product: Product }) {
+function CustomerRowActions({ customer }: { customer: Customer }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
-  const handleDetail = () => {
-    router.push(`/admin/products/${product.id}/detail`);
+  const handleView = () => {
+    router.push(`/admin/customers/${customer.id}`);
   };
 
   const handleEdit = () => {
-    router.push(`/admin/products/${product.id}/edit`);
+    router.push(`/admin/customers/${customer.id}/edit`);
   };
 
   const handleDelete = async () => {
-    if (!confirm(`Delete "${product.name}"? This action cannot be undone.`)) return;
+    if (!confirm(`Delete "${customer.givenName} ${customer.familyName || ''}"? This action cannot be undone.`)) return;
     startTransition(async () => {
-      const { deleteProductAction } = await import("@/app/actions/products/products");
-      const res = await deleteProductAction(product.id);
+      const { deleteCustomerAction } = await import("@/app/actions/customers/customers");
+      const res = await deleteCustomerAction(customer.id);
       if (res.error) {
         gooeyToast.error("", { description: res.error });
       } else {
-        gooeyToast.success("Product deleted.", { description: `${product.name} removed.` });
+        gooeyToast.success("Customer deleted.", {
+          description: `${customer.givenName} ${customer.familyName || ''} removed.`,
+        });
         router.refresh();
       }
     });
@@ -681,17 +488,17 @@ function ProductRowActions({ product }: { product: Product }) {
         variant="ghost"
         size="icon"
         className="h-8 w-8 text-muted-foreground hover:text-foreground"
-        onClick={handleDetail}
-        aria-label="View details"
+        onClick={handleView}
+        aria-label="View customer"
       >
-        <Package className="h-4 w-4" />
+        <Users className="h-4 w-4" />
       </Button>
       <Button
         variant="ghost"
         size="icon"
         className="h-8 w-8 text-muted-foreground hover:text-foreground"
         onClick={handleEdit}
-        aria-label="Edit product"
+        aria-label="Edit customer"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -713,7 +520,7 @@ function ProductRowActions({ product }: { product: Product }) {
         className="h-8 w-8 text-destructive/70 hover:text-destructive"
         onClick={handleDelete}
         disabled={isPending}
-        aria-label="Delete product"
+        aria-label="Delete customer"
       >
         {isPending ? (
           <Loader2 className="h-4 w-4 animate-spin" />
