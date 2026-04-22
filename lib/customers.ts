@@ -396,3 +396,34 @@ export async function setDefaultAddress(
     data: { defaultAddressId: addressId },
   });
 }
+
+
+export async function getCustomerBySquareId(
+  squareId: string
+): Promise<CustomerWithRelations | null> {
+  const customer = await db.customer.findUnique({
+    where: { squareId },
+    include: customerInclude,
+  });
+  return customer ? JSON.parse(JSON.stringify(customer)) : null;
+}
+
+export async function getCustomerByEmail(
+  email: string
+): Promise<CustomerWithRelations | null> {
+  const customer = await db.customer.findFirst({
+    where: { emailAddress: { equals: email, mode: "insensitive" } },
+    include: customerInclude,
+  });
+  return customer ? JSON.parse(JSON.stringify(customer)) : null;
+}
+
+export async function getCustomerByPhone(
+  phone: string
+): Promise<CustomerWithRelations | null> {
+  const customer = await db.customer.findFirst({
+    where: { phoneNumber: phone },
+    include: customerInclude,
+  });
+  return customer ? JSON.parse(JSON.stringify(customer)) : null;
+}
