@@ -1,13 +1,25 @@
 // lib/categories.ts
 
 import db from "./db";
+// lib/categories.ts
+import { unstable_cache } from 'next/cache';
+
+
 
 export interface Category {
   id: string;
   name: string;
   description: string;
 }
-
+export const getCachedCategories = unstable_cache(
+  async () =>
+    db.productCategory.findMany({
+      select: { id: true, name: true },
+      orderBy: { name: 'asc' },
+    }),
+  ['all-categories'],        // cache key (unique)
+  { revalidate: 3600, tags: ['categories'] } // 1h TTL, invalidation tag
+);
 /**
  * Fetch all product categories from the database.
  * Returns an array of categories sorted by name.

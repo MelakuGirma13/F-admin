@@ -3,12 +3,11 @@
 
 
 
-
-
 "use client";
 
-import { useState, useTransition, useCallback } from "react";
-import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { useState, useTransition, useCallback, useMemo, memo } from "react";
+import { useRouter, usePathname } from "next/navigation";
+import Link from "next/link";
 import {
   useReactTable,
   getCoreRowModel,
@@ -29,13 +28,6 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
@@ -55,8 +47,6 @@ import {
   Product,
   SortField,
   SortDir,
-  PRODUCT_ACTIVE_OPTIONS,
-  PRODUCT_FEATURED_OPTIONS,
 } from "@/types/products";
 import { gooeyToast } from "@/components/ui/goey-toaster";
 
@@ -75,9 +65,9 @@ const formatRating = (rating: number | null | undefined) => {
   return rating.toFixed(1);
 };
 
-// ─── Sort button ─────────────────────────────────────────────────────────────
+// ─── Memoized SortButton ─────────────────────────────────────────────────────
 
-function SortButton({
+const SortButton = memo(function SortButton({
   label,
   field,
   currentField,
@@ -114,11 +104,11 @@ function SortButton({
       )}
     </button>
   );
-}
+});
 
-// ─── Badges ───────────────────────────────────────────────────────────────────
+// ─── Memoized Badges ─────────────────────────────────────────────────────────
 
-function ActiveBadge({ isActive }: { isActive: boolean }) {
+const ActiveBadge = memo(function ActiveBadge({ isActive }: { isActive: boolean }) {
   return (
     <span
       className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
@@ -130,9 +120,9 @@ function ActiveBadge({ isActive }: { isActive: boolean }) {
       {isActive ? "Active" : "Inactive"}
     </span>
   );
-}
+});
 
-function FeaturedBadge({ isFeatured }: { isFeatured: boolean }) {
+const FeaturedBadge = memo(function FeaturedBadge({ isFeatured }: { isFeatured: boolean }) {
   return (
     <span
       className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
@@ -144,9 +134,9 @@ function FeaturedBadge({ isFeatured }: { isFeatured: boolean }) {
       {isFeatured ? "Featured" : "Standard"}
     </span>
   );
-}
+});
 
-// ─── Skeleton ────────────────────────────────────────────────────────────────
+// ─── Skeleton (unchanged, already static) ────────────────────────────────────
 
 function TableSkeleton({ rows = 10, cols = 8 }: { rows?: number; cols?: number }) {
   return (
@@ -180,7 +170,191 @@ function TableSkeleton({ rows = 10, cols = 8 }: { rows?: number; cols?: number }
   );
 }
 
-// ─── Props ───────────────────────────────────────────────────────────────────
+// ─── Memoized Cell Components ────────────────────────────────────────────────
+
+const ProductNameCell = memo(function ProductNameCell({
+  productId,
+  name,
+}: {
+  productId: string;
+  name: string;
+}) {
+  return (
+    <Link
+      href={`/admin/products/${productId}/detail`}
+      prefetch
+      className="text-sm font-medium text-foreground transition-colors hover:text-primary hover:underline"
+    >
+      {name}
+    </Link>
+  );
+});
+
+const CompanyCell = memo(function CompanyCell({ company }: { company: string }) {
+  return (
+    <span className="text-sm text-muted-foreground max-w-36 truncate block">
+      {company}
+    </span>
+  );
+});
+
+const PriceCell = memo(function PriceCell({ price }: { price: number }) {
+  return (
+    <div className="text-right text-sm font-semibold text-foreground tabular-nums">
+      {formatCurrency(price)}
+    </div>
+  );
+});
+
+const CategoriesCell = memo(function CategoriesCell({
+  categories,
+}: {
+  categories: { id: string; name: string }[] | null | undefined;
+}) {
+  if (!categories || categories.length === 0)
+    return <span className="text-muted-foreground">—</span>;
+  return (
+    <div className="flex flex-wrap gap-1">
+      {categories.slice(0, 2).map((cat) => (
+        <span
+          key={cat.id}
+          className="inline-flex rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground"
+        >
+          {cat.name}
+        </span>
+      ))}
+      {categories.length > 2 && (
+        <span className="text-xs text-muted-foreground">+{categories.length - 2}</span>
+      )}
+    </div>
+  );
+});
+
+const RatingCell = memo(function RatingCell({
+  rating,
+}: {
+  rating: { average_rating: number | null; review_count: number | null } | null | undefined;
+}) {
+  const avg = rating?.average_rating;
+  const count = rating?.review_count;
+  return (
+    <div className="text-sm">
+      {avg ? (
+        <span className="font-medium text-amber-600 dark:text-amber-400">
+          {formatRating(avg)} ★
+        </span>
+      ) : (
+        <span className="text-muted-foreground">—</span>
+      )}
+      {count !== null && count !== undefined && count > 0 && (
+        <span className="ml-1 text-xs text-muted-foreground">({count})</span>
+      )}
+    </div>
+  );
+});
+
+const CreatedAtCell = memo(function CreatedAtCell({ date }: { date: string }) {
+  return (
+    <span className="text-sm whitespace-nowrap text-muted-foreground">
+      {formatDate(date)}
+    </span>
+  );
+});
+
+// ─── Memoized Row Actions ────────────────────────────────────────────────────
+
+const ProductRowActions = memo(function ProductRowActions({ product }: { product: Product }) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+
+  const handleDetail = useCallback(() => {
+    router.push(`/admin/products/${product.id}/detail`);
+  }, [product.id, router]);
+
+  const handleEdit = useCallback(() => {
+    router.push(`/admin/products/${product.id}/edit`);
+  }, [product.id, router]);
+
+  const handleDelete = useCallback(async () => {
+    if (!confirm(`Delete "${product.name}"? This action cannot be undone.`)) return;
+    startTransition(async () => {
+      const { deleteProductAction } = await import("@/app/actions/products/products");
+      const res = await deleteProductAction(product.id);
+      if (res.error) {
+        gooeyToast.error("", { description: res.error });
+      } else {
+        gooeyToast.success("Product deleted.", { description: `${product.name} removed.` });
+        router.refresh();
+      }
+    });
+  }, [product.id, product.name, router, startTransition]);
+
+  return (
+    <div className="flex items-center justify-end gap-2">
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8 text-muted-foreground hover:text-foreground"
+        onClick={handleDetail}
+        aria-label="View details"
+      >
+        <Package className="h-4 w-4" />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8 text-muted-foreground hover:text-foreground"
+        onClick={handleEdit}
+        aria-label="Edit product"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="h-4 w-4"
+        >
+          <path d="M17 3l4 4-7 7H10v-4l7-7z" />
+          <path d="M4 20h16" />
+        </svg>
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8 text-destructive/70 hover:text-destructive"
+        onClick={handleDelete}
+        disabled={isPending}
+        aria-label="Delete product"
+      >
+        {isPending ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="h-4 w-4"
+          >
+            <path d="M4 7h16" />
+            <path d="M10 11v6" />
+            <path d="M14 11v6" />
+            <path d="M5 7l1 13a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-13" />
+            <path d="M9 4h6" />
+          </svg>
+        )}
+      </Button>
+    </div>
+  );
+});
+
+// ─── Main Component ──────────────────────────────────────────────────────────
 
 interface ProductsTableProps {
   products: Product[];
@@ -202,11 +376,7 @@ interface ProductsTableProps {
   isLoading?: boolean;
 }
 
-// ─── Column helper ────────────────────────────────────────────────────────────
-
 const col = createColumnHelper<Product>();
-
-// ─── Component ───────────────────────────────────────────────────────────────
 
 export function ProductsTable({
   products,
@@ -229,17 +399,20 @@ export function ProductsTable({
 }: ProductsTableProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
 
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
 
-  const sorting: SortingState = [{ id: sortField, desc: sortDir === "desc" }];
+  const sorting: SortingState = useMemo(
+    () => [{ id: sortField, desc: sortDir === "desc" }],
+    [sortField, sortDir]
+  );
 
+  // Stabilized sort callback – avoids dependency on searchParams string
   const pushSort = useCallback(
     (field: SortField) => {
-      const params = new URLSearchParams(searchParams.toString());
+      const params = new URLSearchParams(window.location.search);
       const newDir: SortDir = field === sortField && sortDir === "desc" ? "asc" : "desc";
       params.set("sort", `${field}.${newDir}`);
       params.set("page", "1");
@@ -247,196 +420,144 @@ export function ProductsTable({
         router.push(`${pathname}?${params.toString()}`);
       });
     },
-    [pathname, router, searchParams, sortField, sortDir]
+    [pathname, router, sortField, sortDir]
   );
 
-  const columns = [
-    col.display({
-      id: "select",
-      enableHiding: false,
-      header: ({ table }) => (
-        <Checkbox
-          checked={table.getIsAllPageRowsSelected()}
-          data-state={table.getIsSomePageRowsSelected() ? "indeterminate" : undefined}
-          onCheckedChange={(v) => table.toggleAllPageRowsSelected(!!v)}
-          aria-label="Select all"
-          className="translate-y-px"
-        />
-      ),
-      cell: ({ row }) => (
-        <Checkbox
-          checked={row.getIsSelected()}
-          onCheckedChange={(v) => row.toggleSelected(!!v)}
-          aria-label={`Select product ${row.original.id}`}
-          className="translate-y-px"
-        />
-      ),
-    }),
-    col.accessor("name", {
-      id: "name",
-      enableHiding: false,
-      header: () => (
-        <SortButton
-          label="Product"
-          field="name"
-          currentField={sortField}
-          currentDir={sortDir}
-          onSort={pushSort}
-          disabled={isPending}
-        />
-      ),
-      cell: (info) => {
-        const product = info.row.original;
-        return (
-          <button
-            className="text-sm font-medium text-foreground transition-colors hover:text-primary hover:underline"
-            onClick={() => router.push(`/admin/products/${product.id}/detail`)}
-          >
-            {info.getValue()}
-          </button>
-        );
-      },
-    }),
-    col.accessor("company", {
-      header: () => (
-        <SortButton
-          label="Company"
-          field="company"
-          currentField={sortField}
-          currentDir={sortDir}
-          onSort={pushSort}
-          disabled={isPending}
-        />
-      ),
-      cell: (info) => (
-        <span className="text-sm text-muted-foreground max-w-36 truncate block">
-          {info.getValue()}
-        </span>
-      ),
-    }),
-    col.accessor("base_price", {
-      header: () => (
-        <div className="flex justify-end">
+  // Memoize columns – prevents recreation on every render
+  const columns = useMemo(
+    () => [
+      col.display({
+        id: "select",
+        enableHiding: false,
+        header: ({ table }) => (
+          <Checkbox
+            checked={table.getIsAllPageRowsSelected()}
+            data-state={table.getIsSomePageRowsSelected() ? "indeterminate" : undefined}
+            onCheckedChange={(v) => table.toggleAllPageRowsSelected(!!v)}
+            aria-label="Select all"
+            className="translate-y-px"
+          />
+        ),
+        cell: ({ row }) => (
+          <Checkbox
+            checked={row.getIsSelected()}
+            onCheckedChange={(v) => row.toggleSelected(!!v)}
+            aria-label={`Select product ${row.original.id}`}
+            className="translate-y-px"
+          />
+        ),
+      }),
+      col.accessor("name", {
+        id: "name",
+        enableHiding: false,
+        header: () => (
           <SortButton
-            label="Price"
-            field="base_price"
+            label="Product"
+            field="name"
             currentField={sortField}
             currentDir={sortDir}
             onSort={pushSort}
             disabled={isPending}
           />
-        </div>
-      ),
-      cell: (info) => (
-        <div className="text-right text-sm font-semibold text-foreground tabular-nums">
-          {formatCurrency(info.getValue())}
-        </div>
-      ),
-    }),
-    col.accessor("is_active", {
-      header: () => (
-        <SortButton
-          label="Status"
-          field="is_active"
-          currentField={sortField}
-          currentDir={sortDir}
-          onSort={pushSort}
-          disabled={isPending}
-        />
-      ),
-      cell: (info) => <ActiveBadge isActive={info.getValue()} />,
-    }),
-    col.accessor("is_featured", {
-      header: () => (
-        <SortButton
-          label="Featured"
-          field="is_featured"
-          currentField={sortField}
-          currentDir={sortDir}
-          onSort={pushSort}
-          disabled={isPending}
-        />
-      ),
-      cell: (info) => <FeaturedBadge isFeatured={info.getValue()} />,
-    }),
-    col.accessor("categories", {
-      id: "categories",
-      header: () => (
-        <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-          Categories
-        </span>
-      ),
-      cell: (info) => {
-        const cats = info.getValue();
-        if (!cats || cats.length === 0) return <span className="text-muted-foreground">—</span>;
-        return (
-          <div className="flex flex-wrap gap-1">
-            {cats.slice(0, 2).map((cat) => (
-              <span
-                key={cat.id}
-                className="inline-flex rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground"
-              >
-                {cat.name}
-              </span>
-            ))}
-            {cats.length > 2 && (
-              <span className="text-xs text-muted-foreground">+{cats.length - 2}</span>
-            )}
+        ),
+        cell: (info) => (
+          <ProductNameCell productId={info.row.original.id} name={info.getValue()} />
+        ),
+      }),
+      col.accessor("company", {
+        header: () => (
+          <SortButton
+            label="Company"
+            field="company"
+            currentField={sortField}
+            currentDir={sortDir}
+            onSort={pushSort}
+            disabled={isPending}
+          />
+        ),
+        cell: (info) => <CompanyCell company={info.getValue()} />,
+      }),
+      col.accessor("base_price", {
+        header: () => (
+          <div className="flex justify-end">
+            <SortButton
+              label="Price"
+              field="base_price"
+              currentField={sortField}
+              currentDir={sortDir}
+              onSort={pushSort}
+              disabled={isPending}
+            />
           </div>
-        );
-      },
-    }),
-    col.accessor("averageRating", {
-      id: "averageRating",
-      header: () => (
-        <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-          Rating
-        </span>
-      ),
-      cell: (info) => {
-        const rating = info.getValue();
-        const avg = rating?.average_rating;
-        const count = rating?.review_count;
-        return (
-          <div className="text-sm">
-            {avg ? (
-              <span className="font-medium text-amber-600 dark:text-amber-400">
-                {formatRating(avg)} ★
-              </span>
-            ) : (
-              <span className="text-muted-foreground">—</span>
-            )}
-            {count !== null && count !== undefined && count > 0 && (
-              <span className="ml-1 text-xs text-muted-foreground">({count})</span>
-            )}
-          </div>
-        );
-      },
-    }),
-    col.accessor("created_at", {
-      id: "created_at",
-      header: () => (
-        <SortButton
-          label="Created"
-          field="created_at"
-          currentField={sortField}
-          currentDir={sortDir}
-          onSort={pushSort}
-          disabled={isPending}
-        />
-      ),
-      cell: (info) => (
-        <span className="text-sm whitespace-nowrap text-muted-foreground">
-          {formatDate(info.getValue().toString())}
-        </span>
-      ),
-    }),
-    col.display({
-      id: "actions",
-      enableHiding: false,
-      cell: ({ row }) => <ProductRowActions product={row.original} />,
-    }),
-  ];
+        ),
+        cell: (info) => <PriceCell price={info.getValue()} />,
+      }),
+      col.accessor("is_active", {
+        header: () => (
+          <SortButton
+            label="Status"
+            field="is_active"
+            currentField={sortField}
+            currentDir={sortDir}
+            onSort={pushSort}
+            disabled={isPending}
+          />
+        ),
+        cell: (info) => <ActiveBadge isActive={info.getValue()} />,
+      }),
+      col.accessor("is_featured", {
+        header: () => (
+          <SortButton
+            label="Featured"
+            field="is_featured"
+            currentField={sortField}
+            currentDir={sortDir}
+            onSort={pushSort}
+            disabled={isPending}
+          />
+        ),
+        cell: (info) => <FeaturedBadge isFeatured={info.getValue()} />,
+      }),
+      col.accessor("categories", {
+        id: "categories",
+        header: () => (
+          <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+            Categories
+          </span>
+        ),
+        cell: (info) => <CategoriesCell categories={info.getValue()} />,
+      }),
+      col.accessor("averageRating", {
+        id: "averageRating",
+        header: () => (
+          <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+            Rating
+          </span>
+        ),
+        cell: (info) => <RatingCell rating={info.getValue()} />,
+      }),
+      col.accessor("created_at", {
+        id: "created_at",
+        header: () => (
+          <SortButton
+            label="Created"
+            field="created_at"
+            currentField={sortField}
+            currentDir={sortDir}
+            onSort={pushSort}
+            disabled={isPending}
+          />
+        ),
+        cell: (info) => <CreatedAtCell date={info.getValue().toString()} />,
+      }),
+      col.display({
+        id: "actions",
+        enableHiding: false,
+        cell: ({ row }) => <ProductRowActions product={row.original} />,
+      }),
+    ],
+    [sortField, sortDir, pushSort, isPending]
+  );
 
   const table = useReactTable({
     data: products,
@@ -451,43 +572,58 @@ export function ProductsTable({
     manualPagination: true,
     pageCount: totalPages,
     enableRowSelection: true,
+    enableColumnResizing: false,        // Disable unused feature
+    enableFilters: false,               // Filters are handled externally
     onRowSelectionChange: setRowSelection,
     onColumnVisibilityChange: setColumnVisibility,
     getCoreRowModel: getCoreRowModel(),
   });
 
-  const selectedIds = Object.keys(rowSelection).filter((id) => rowSelection[id]);
+  const selectedIds = useMemo(
+    () => Object.keys(rowSelection).filter((id) => rowSelection[id]),
+    [rowSelection]
+  );
 
-  // ── Bulk actions ──────────────────────────────────────────────────────────
-  const bulkSetActive = (active: boolean) => {
-    startTransition(async () => {
-      const res = await bulkUpdateActiveStatusAction(selectedIds, active);
-      if (res.error) {
-        gooeyToast.error("", { description: res.error });
-      } else {
-        gooeyToast.success("Status updated.", {
-          description: `${selectedIds.length} product${selectedIds.length > 1 ? "s" : ""} marked as ${active ? "active" : "inactive"}.`,
-        });
-        setRowSelection({});
-      }
-    });
-  };
+  // Bulk action handlers – already stable
+  const bulkSetActive = useCallback(
+    (active: boolean) => {
+      startTransition(async () => {
+        const res = await bulkUpdateActiveStatusAction(selectedIds, active);
+        if (res.error) {
+          gooeyToast.error("", { description: res.error });
+        } else {
+          gooeyToast.success("Status updated.", {
+            description: `${selectedIds.length} product${
+              selectedIds.length > 1 ? "s" : ""
+            } marked as ${active ? "active" : "inactive"}.`,
+          });
+          setRowSelection({});
+        }
+      });
+    },
+    [selectedIds, startTransition]
+  );
 
-  const bulkSetFeatured = (featured: boolean) => {
-    startTransition(async () => {
-      const res = await bulkUpdateFeaturedAction(selectedIds, featured);
-      if (res.error) {
-        gooeyToast.error("", { description: res.error });
-      } else {
-        gooeyToast.success("Featured status updated.", {
-          description: `${selectedIds.length} product${selectedIds.length > 1 ? "s" : ""} ${featured ? "featured" : "unfeatured"}.`,
-        });
-        setRowSelection({});
-      }
-    });
-  };
+  const bulkSetFeatured = useCallback(
+    (featured: boolean) => {
+      startTransition(async () => {
+        const res = await bulkUpdateFeaturedAction(selectedIds, featured);
+        if (res.error) {
+          gooeyToast.error("", { description: res.error });
+        } else {
+          gooeyToast.success("Featured status updated.", {
+            description: `${selectedIds.length} product${
+              selectedIds.length > 1 ? "s" : ""
+            } ${featured ? "featured" : "unfeatured"}.`,
+          });
+          setRowSelection({});
+        }
+      });
+    },
+    [selectedIds, startTransition]
+  );
 
-  const bulkDelete = () => {
+  const bulkDelete = useCallback(() => {
     if (!confirm(`Delete ${selectedIds.length} product(s)? This action cannot be undone.`)) return;
     startTransition(async () => {
       const res = await bulkDeleteProductsAction(selectedIds);
@@ -495,12 +631,14 @@ export function ProductsTable({
         gooeyToast.error("", { description: res.error });
       } else {
         gooeyToast.success("Products deleted.", {
-          description: `${selectedIds.length} product${selectedIds.length > 1 ? "s" : ""} removed.`,
+          description: `${selectedIds.length} product${
+            selectedIds.length > 1 ? "s" : ""
+          } removed.`,
         });
         setRowSelection({});
       }
     });
-  };
+  }, [selectedIds, startTransition]);
 
   return (
     <>
@@ -644,98 +782,5 @@ export function ProductsTable({
         />
       </div>
     </>
-  );
-}
-
-// ─── Row Actions Component ──────────────────────────────────────────────────
-
-function ProductRowActions({ product }: { product: Product }) {
-  const router = useRouter();
-  const [isPending, startTransition] = useTransition();
-
-  const handleDetail = () => {
-    router.push(`/admin/products/${product.id}/detail`);
-  };
-
-  const handleEdit = () => {
-    router.push(`/admin/products/${product.id}/edit`);
-  };
-
-  const handleDelete = async () => {
-    if (!confirm(`Delete "${product.name}"? This action cannot be undone.`)) return;
-    startTransition(async () => {
-      const { deleteProductAction } = await import("@/app/actions/products/products");
-      const res = await deleteProductAction(product.id);
-      if (res.error) {
-        gooeyToast.error("", { description: res.error });
-      } else {
-        gooeyToast.success("Product deleted.", { description: `${product.name} removed.` });
-        router.refresh();
-      }
-    });
-  };
-
-  return (
-    <div className="flex items-center justify-end gap-2">
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-8 w-8 text-muted-foreground hover:text-foreground"
-        onClick={handleDetail}
-        aria-label="View details"
-      >
-        <Package className="h-4 w-4" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-8 w-8 text-muted-foreground hover:text-foreground"
-        onClick={handleEdit}
-        aria-label="Edit product"
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="h-4 w-4"
-        >
-          <path d="M17 3l4 4-7 7H10v-4l7-7z" />
-          <path d="M4 20h16" />
-        </svg>
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-8 w-8 text-destructive/70 hover:text-destructive"
-        onClick={handleDelete}
-        disabled={isPending}
-        aria-label="Delete product"
-      >
-        {isPending ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : (
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="h-4 w-4"
-          >
-            <path d="M4 7h16" />
-            <path d="M10 11v6" />
-            <path d="M14 11v6" />
-            <path d="M5 7l1 13a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-13" />
-            <path d="M9 4h6" />
-          </svg>
-        )}
-      </Button>
-    </div>
   );
 }

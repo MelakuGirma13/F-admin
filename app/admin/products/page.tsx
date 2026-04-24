@@ -1,3 +1,4 @@
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import type { Metadata } from "next";
@@ -7,15 +8,17 @@ import { Button } from "@/components/ui/button";
 import { Package, Plus } from "lucide-react";
 import type { SortField, SortDir, ActiveFilter, FeaturedFilter } from "@/types/products";
 import { ProductsTable } from "@/components/products/components/products-table";
-import StatCard from "@/components/common/StatCard"
-import Link from "next/link"
-import {TableSkeleton} from "@/components/common/Skeletons"
+import StatCard from "@/components/common/StatCard";
+import Link from "next/link";
+import { TableSkeleton } from "@/components/common/Skeletons";
+import { getCachedCategories } from '@/lib/categories';
 export const metadata: Metadata = {
   title: "Products | Admin Dashboard",
   description: "Manage your product catalog",
 };
 
-export const dynamic = "force-dynamic";
+// ISR: revalidate cached page every 60 seconds for each unique URL (including search params)
+export const revalidate = 60;
 
 // ─── Validation constants ─────────────────────────────────────────────────────
 
@@ -32,16 +35,25 @@ const VALID_SORT_FIELDS = new Set<string>([
   "updated_at",
 ]);
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
-
-interface ProductsPageProps {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
+// ─── Helper to parse search params ─────────────────────────────────────────
+interface ParsedParams {
+  search: string;
+  isActive: ActiveFilter;
+  isFeatured: FeaturedFilter;
+  categoryId: string;
+  priceMin: string;
+  priceMax: string;
+  dateFrom: string;
+  dateTo: string;
+  page: number;
+  pageSize: number;
+  sortField: SortField;
+  sortDir: SortDir;
 }
 
-const ProductsPage = async ({ searchParams }: ProductsPageProps): Promise<React.ReactElement> => {
-  const params = await searchParams;
-
-  // ── Parse URL params ──
+async function parseSearchParams(
+  params: Record<string, string | string[] | undefined>
+): Promise<ParsedParams> {
   const search = typeof params.search === "string" ? params.search.trim() : "";
 
   const rawIsActive = typeof params.isActive === "string" ? params.isActive : "";
@@ -67,7 +79,6 @@ const ProductsPage = async ({ searchParams }: ProductsPageProps): Promise<React.
     typeof params.pageSize === "string" ? parseInt(params.pageSize, 10) : DEFAULT_PAGE_SIZE;
   const pageSize = VALID_PAGE_SIZES.has(rawPageSize) ? rawPageSize : DEFAULT_PAGE_SIZE;
 
-  // sort=<field>.<dir> e.g. "name.asc"
   const rawSort = typeof params.sort === "string" ? params.sort : "";
   const [rawField, rawDir] = rawSort.split(".");
   const sortField: SortField = VALID_SORT_FIELDS.has(rawField)
@@ -75,48 +86,116 @@ const ProductsPage = async ({ searchParams }: ProductsPageProps): Promise<React.
     : "created_at";
   const sortDir: SortDir = rawDir === "asc" ? "asc" : "desc";
 
-  // ── Fetch data ──
+  return {
+    search,
+    isActive,
+    isFeatured,
+    categoryId,
+    priceMin,
+    priceMax,
+    dateFrom,
+    dateTo,
+    page,
+    pageSize,
+    sortField,
+    sortDir,
+  };
+}
+
+// ─── Async data‑fetching component (streamed inside the outer Suspense) ────────
+async function ProductPageContent({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  // Resolve params
+  const params = await searchParams;
+  const parsed = await parseSearchParams(params);
+
+  // Fetch everything in parallel (products, counts, categories)
   let result;
   let activeCount = 0;
   let inactiveCount = 0;
   let featuredCount = 0;
   let fetchError: string | null = null;
+  let categories: { id: string; name: string }[] = [];
 
   try {
-    // Fetch products and counts in parallel
-    [result, activeCount, inactiveCount, featuredCount] = await Promise.all([
+    [result, activeCount, inactiveCount, featuredCount, categories] = await Promise.all([
       getProducts({
-        search,
-        isActive,
-        isFeatured,
-        categoryId,
-        priceMin,
-        priceMax,
-        dateFrom,
-        dateTo,
-        sortField,
-        sortDir,
-        page,
-        pageSize,
+        search: parsed.search,
+        isActive: parsed.isActive,
+        isFeatured: parsed.isFeatured,
+        categoryId: parsed.categoryId,
+        priceMin: parsed.priceMin,
+        priceMax: parsed.priceMax,
+        dateFrom: parsed.dateFrom,
+        dateTo: parsed.dateTo,
+        sortField: parsed.sortField,
+        sortDir: parsed.sortDir,
+        page: parsed.page,
+        pageSize: parsed.pageSize,
       }),
       getProductCountByActive(true),
       getProductCountByActive(false),
       getProductCountByFeatured(true),
+      
+      getCachedCategories(),
     ]);
   } catch (err) {
     fetchError = err instanceof Error ? err.message : "Failed to load products.";
-    result = { products: [], total: 0, page: 1, pageSize, totalPages: 1 };
+    result = { products: [], total: 0, page: 1, pageSize: parsed.pageSize, totalPages: 1 };
   }
 
-  // Fetch all categories for filter dropdown
-  let categories: { id: string; name: string }[] = [];
-  try {
-    const { getAllCategories } = await import("@/lib/categories");
-    categories = await getAllCategories();
-  } catch (err) {
-    console.error("Failed to load categories", err);
-  }
+  return (
+    <>
+      {/* Error state */}
+      {fetchError && (
+        <div className="mb-6 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          {fetchError}
+        </div>
+      )}
 
+      {/* Stats Row */}
+      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <StatCard label="Total Products" value={result.total} />
+        <StatCard label="Active" value={activeCount} accent="active" />
+        <StatCard label="Inactive" value={inactiveCount} accent="inactive" />
+        <StatCard label="Featured" value={featuredCount} accent="featured" />
+      </div>
+
+      {/* Main Card – filters, table, and pagination */}
+      <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+        {/* Inner Suspense removed: data is already fully loaded, table never suspends */}
+        <ProductsTable
+          products={result.products as any}
+          total={result.total}
+          page={result.page}
+          pageSize={result.pageSize}
+          totalPages={result.totalPages}
+          search={parsed.search}
+          isActive={parsed.isActive}
+          isFeatured={parsed.isFeatured}
+          categoryId={parsed.categoryId}
+          priceMin={parsed.priceMin}
+          priceMax={parsed.priceMax}
+          dateFrom={parsed.dateFrom}
+          dateTo={parsed.dateTo}
+          sortField={parsed.sortField}
+          sortDir={parsed.sortDir}
+          categories={categories}
+        />
+      </div>
+    </>
+  );
+}
+
+// ─── Page shell (renders instantly, streams heavy content) ─────────────────────
+interface ProductsPageProps {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
+
+export default function ProductsPage({ searchParams }: ProductsPageProps) {
   return (
     <main className="min-h-screen bg-background">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -141,49 +220,27 @@ const ProductsPage = async ({ searchParams }: ProductsPageProps): Promise<React.
           </Link>
         </header>
 
-        {/* Error state */}
-        {fetchError && (
-          <div className="mb-6 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-            {fetchError}
-          </div>
-        )}
-
-        {/* Stats Row */}
-        <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <StatCard label="Total Products" value={result.total} />
-          <StatCard label="Active" value={activeCount} accent="active" />
-          <StatCard label="Inactive" value={inactiveCount} accent="inactive" />
-          <StatCard label="Featured" value={featuredCount} accent="featured" />
-        </div>
-
-        {/* Main Card — filters, table, and pagination */}
-        <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
-          <Suspense fallback={<TableSkeleton pageSize={pageSize} />}>
-            <ProductsTable
-              products={result.products as any}
-              total={result.total}
-              page={result.page}
-              pageSize={result.pageSize}
-              totalPages={result.totalPages}
-              search={search}
-              isActive={isActive}
-              isFeatured={isFeatured}
-              categoryId={categoryId}
-              priceMin={priceMin}
-              priceMax={priceMax}
-              dateFrom={dateFrom}
-              dateTo={dateTo}
-              sortField={sortField}
-              sortDir={sortDir}
-              categories={categories}
-            />
-          </Suspense>
-        </div>
+        {/* Stream the data‑heavy content with a skeleton fallback */}
+        <Suspense
+          fallback={
+            <div className="space-y-6">
+              {/* Skeleton stats */}
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {[...Array(4)].map((_, i) => (
+                  <div
+                    key={i}
+                    className="h-20 animate-pulse rounded-lg border bg-card"
+                  />
+                ))}
+              </div>
+              {/* Skeleton table (pageSize hardcoded because params not yet resolved) */}
+              <TableSkeleton pageSize={10} />
+            </div>
+          }
+        >
+          <ProductPageContent searchParams={searchParams} />
+        </Suspense>
       </div>
     </main>
   );
-};
-
-export default ProductsPage;
-
-
+}

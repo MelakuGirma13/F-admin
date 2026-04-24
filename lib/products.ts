@@ -94,6 +94,16 @@ export async function getProducts(
     dateTo,
   } = params;
 
+  const productInclude = {
+    categories: true,
+    // images: true,
+    // prices: true,
+    // sizes: true,
+    // material: true,
+    // favorites: true,
+    // reviews: true,
+    // averageRating: true,
+  } as const;
   const skip = (page - 1) * pageSize;
   const take = pageSize;
 
@@ -180,7 +190,7 @@ export async function getProducts(
       include: productInclude,
     }),
   ]);
-
+console.log("getproducts")
   return {
     products:JSON.parse(JSON.stringify(productsData)) ,
     total,
